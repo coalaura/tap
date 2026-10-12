@@ -11,11 +11,11 @@ import (
 )
 
 func (pkg *Package) InstallMSI(path string) error {
-	return fmt.Errorf("%s requires Windows Installer", pkg.Definition.Name)
+	return fmt.Errorf("%s requires windows installer", pkg.Definition.Name)
 }
 
 func (pkg *Package) RemoveMSI() error {
-	return fmt.Errorf("%s requires Windows Installer", pkg.Definition.Name)
+	return fmt.Errorf("%s requires windows installer", pkg.Definition.Name)
 }
 
 func InstallGo(ver semver.SemVer) error {

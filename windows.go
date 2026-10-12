@@ -99,7 +99,7 @@ func RunMSI(action, path string) error {
 	var exitError *exec.ExitError
 
 	if errors.As(err, &exitError) && exitError.ExitCode() == 3010 {
-		log.Warnln("Windows Installer completed successfully; a restart is required.")
+		log.Warnln("done; restart required")
 
 		return nil
 	}

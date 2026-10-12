@@ -12,48 +12,70 @@ import (
 )
 
 func NewCommand() *cli.Command {
-	return &cli.Command{
-		Name:    "tap",
-		Usage:   "A small package manager for Windows and Linux",
-		Version: Version,
-		Action:  showHelp,
+	cli.RootCommandHelpTemplate = helpTemplate
+	cli.CommandHelpTemplate = helpTemplate
+	cli.SubcommandHelpTemplate = helpTemplate
+	cli.UsageCommandHelp = "show help"
+	cli.ShowCommandHelp = showCommandHelp
+
+	command := &cli.Command{
+		Name:         "tap",
+		Usage:        "a small package manager",
+		Version:      Version,
+		Action:       showHelp,
+		Before:       checkPath,
+		OnUsageError: usageError,
 		Commands: []*cli.Command{
 			{
 				Name:   "tap",
-				Usage:  "Update tap itself to the latest stable release",
+				Usage:  "update tap",
 				Action: updateTap,
 			},
 			{
 				Name:      "get",
-				Usage:     "Install packages or update them to the latest stable version",
+				Usage:     "install or update packages",
 				ArgsUsage: "<package>...",
 				Action:    getPackages,
 			},
 			{
 				Name:      "rm",
-				Usage:     "Remove installed packages",
+				Usage:     "remove packages",
 				ArgsUsage: "<package>...",
 				Action:    removePackages,
 			},
 			{
 				Name:   "ls",
-				Usage:  "List installed packages from the catalog",
+				Usage:  "list installed packages",
 				Action: listPackages,
 			},
 			{
 				Name:      "find",
-				Usage:     "Search the catalog by name or description; omit the query to show all",
+				Usage:     "search packages (default: all)",
 				ArgsUsage: "[query]",
 				Action:    findPackages,
 			},
 			{
 				Name:      "info",
-				Usage:     "Show package details and local installation status",
+				Usage:     "show package details",
 				ArgsUsage: "<package>...",
 				Action:    packageInfo,
 			},
+			{
+				Name:            "help",
+				Aliases:         []string{"h"},
+				Usage:           "show help",
+				ArgsUsage:       "[command]",
+				HideHelpCommand: true,
+				Action:          helpCommand,
+			},
 		},
 	}
+
+	for _, subcommand := range command.Commands {
+		subcommand.OnUsageError = usageError
+	}
+
+	return command
 }
 
 func showHelp(ctx context.Context, command *cli.Command) error {
@@ -62,6 +84,33 @@ func showHelp(ctx context.Context, command *cli.Command) error {
 	}
 
 	return cli.ShowAppHelp(command)
+}
+
+func showCommandHelp(ctx context.Context, command *cli.Command, name string) error {
+	if command.Command(name) == nil {
+		return fmt.Errorf("unknown command %q; see %s --help", name, command.FullName())
+	}
+
+	return cli.DefaultShowCommandHelp(ctx, command, name)
+}
+
+func helpCommand(ctx context.Context, command *cli.Command) error {
+	if command.Args().Len() != 0 {
+		return showCommandHelp(ctx, command.Root(), command.Args().First())
+	}
+
+	return cli.ShowAppHelp(command)
+}
+
+// Use a command hook so --version stays parseable during self-updates.
+func checkPath(ctx context.Context, command *cli.Command) (context.Context, error) {
+	WarnMissingPath()
+
+	return ctx, nil
+}
+
+func usageError(ctx context.Context, command *cli.Command, err error, subcommand bool) error {
+	return fmt.Errorf("%w; see %s --help", err, command.FullName())
 }
 
 func updateTap(ctx context.Context, command *cli.Command) error {
@@ -82,7 +131,7 @@ func removePackages(ctx context.Context, command *cli.Command) error {
 
 func applyPackages(ctx context.Context, command *cli.Command, action func(*Package) error) error {
 	if command.Args().Len() == 0 {
-		return fmt.Errorf("usage: tap %s <package> [<package>...]", command.Name)
+		return fmt.Errorf("package required; see tap %s --help", command.Name)
 	}
 
 	packages, err := SelectPackages(command.Args().Slice())
@@ -118,7 +167,7 @@ func listPackages(ctx context.Context, command *cli.Command) error {
 
 	writer := tabwriter.NewWriter(command.Root().Writer, 0, 4, 2, ' ', 0)
 
-	fmt.Fprintln(writer, "PACKAGE\tVERSION\tPATH")
+	fmt.Fprintln(writer, "package\tversion\tpath")
 
 	var failures []error
 
@@ -154,7 +203,7 @@ func findPackages(ctx context.Context, command *cli.Command) error {
 
 	writer := tabwriter.NewWriter(command.Root().Writer, 0, 4, 2, ' ', 0)
 
-	fmt.Fprintln(writer, "PACKAGE\tDESCRIPTION\tSUPPORTED")
+	fmt.Fprintln(writer, "package\tdescription\tsupported")
 
 	for index := range packageCatalog {
 		definition := &packageCatalog[index]
@@ -164,7 +213,7 @@ func findPackages(ctx context.Context, command *cli.Command) error {
 
 		_, supported := definition.Platforms[runtime.GOOS+"-"+runtime.GOARCH]
 
-		fmt.Fprintf(writer, "%s\t%s\t%t\n", definition.Name, definition.Description, supported)
+		fmt.Fprintf(writer, "%s\t%s\t%t\n", definition.Name, strings.ToLower(definition.Description), supported)
 	}
 
 	return writer.Flush()
@@ -172,7 +221,7 @@ func findPackages(ctx context.Context, command *cli.Command) error {
 
 func packageInfo(ctx context.Context, command *cli.Command) error {
 	if command.Args().Len() == 0 {
-		return errors.New("usage: tap info <package> [<package>...]")
+		return errors.New("package required; see tap info --help")
 	}
 
 	packages, err := SelectPackages(command.Args().Slice())
@@ -189,13 +238,13 @@ func packageInfo(ctx context.Context, command *cli.Command) error {
 
 		definition := pkg.Definition
 
-		fmt.Fprintf(writer, "%s - %s\nSource: %s\n", definition.Name, definition.Description, definition.Source)
+		fmt.Fprintf(writer, "%s - %s\nsource: %s\n", definition.Name, strings.ToLower(definition.Description), definition.Source)
 
 		if definition.Repository != "" {
-			fmt.Fprintf(writer, "Repository: https://github.com/%s\n", definition.Repository)
+			fmt.Fprintf(writer, "repo: https://github.com/%s\n", definition.Repository)
 		}
 
-		fmt.Fprintf(writer, "Path: %s\n", pkg.Path)
+		fmt.Fprintf(writer, "path: %s\n", pkg.Path)
 
 		installed, err := pkg.IsInstalled()
 		if err != nil {
@@ -203,7 +252,7 @@ func packageInfo(ctx context.Context, command *cli.Command) error {
 		}
 
 		if !installed {
-			fmt.Fprintln(writer, "Installed: no")
+			fmt.Fprintln(writer, "installed: no")
 
 			continue
 		}
@@ -213,7 +262,7 @@ func packageInfo(ctx context.Context, command *cli.Command) error {
 			return fmt.Errorf("%s: %w", definition.Name, err)
 		}
 
-		fmt.Fprintf(writer, "Installed: %s\n", version)
+		fmt.Fprintf(writer, "installed: %s\n", version)
 	}
 
 	return nil

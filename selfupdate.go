@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"time"
 
 	"github.com/coalaura/semver"
 )
@@ -42,7 +43,9 @@ func UpdateTap() error {
 		os.Remove(executable + ".tap-old")
 	}
 
-	log.Infof("Checking tap version...\n")
+	log.Infof("checking tap\n")
+
+	checkStarted := time.Now()
 
 	release, err := FetchLatestGitHubRelease(tapRepository)
 	if err != nil {
@@ -55,10 +58,12 @@ func UpdateTap() error {
 	}
 
 	if !local.IsInvalid() && !remote.HigherThan(local) {
-		log.Subf("Already up-to-date (installed %s, latest %s)\n", local, remote)
+		log.Subf("up to date: %s (checked in %s)\n", local, time.Since(checkStarted).Round(time.Millisecond))
 
 		return nil
 	}
+
+	log.Subf("latest %s (checked in %s)\n", remote, time.Since(checkStarted).Round(time.Millisecond))
 
 	name := "tap-" + runtime.GOOS + "-" + runtime.GOARCH
 
@@ -71,7 +76,9 @@ func UpdateTap() error {
 		return err
 	}
 
-	log.Infof("Installing tap %s...\n", remote)
+	log.Stepf("updating tap %s\n", remote)
+
+	installStarted := time.Now()
 
 	source, err := DownloadTempFile(asset.URL, filepath.Ext(name), asset.Digest)
 	if err != nil {
@@ -115,7 +122,7 @@ func UpdateTap() error {
 		return fmt.Errorf("replace tap executable: %w", err)
 	}
 
-	log.Successf("Updated tap to %s.\n", remote)
+	log.Successf("updated tap %s in %s\n", remote, time.Since(installStarted).Round(time.Millisecond))
 
 	return nil
 }

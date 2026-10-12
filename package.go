@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/coalaura/semver"
 	"github.com/coalaura/tap/internal/catalog"
@@ -19,7 +20,9 @@ type Package struct {
 }
 
 func (pkg *Package) Get() error {
-	log.Infof("Checking %s version...\n", pkg.Definition.Name)
+	log.Infof("checking %s\n", pkg.Definition.Name)
+
+	checkStarted := time.Now()
 
 	local, err := pkg.ResolveCurrentVersion()
 	if err != nil {
@@ -32,12 +35,15 @@ func (pkg *Package) Get() error {
 	}
 
 	if !local.Equal(semver.NewEmptySemVer()) && !remote.HigherThan(local) {
-		log.Subf("Already up-to-date (installed %s, latest %s)\n", local, remote)
+		log.Subf("up to date: %s (checked in %s)\n", local, time.Since(checkStarted).Round(time.Millisecond))
 
 		return nil
 	}
 
-	log.Infof("Installing %s %s...\n", pkg.Definition.Name, remote)
+	log.Subf("latest %s (checked in %s)\n", remote, time.Since(checkStarted).Round(time.Millisecond))
+	log.Stepf("installing %s %s\n", pkg.Definition.Name, remote)
+
+	installStarted := time.Now()
 
 	err = pkg.Install(remote)
 	if err != nil {
@@ -49,7 +55,7 @@ func (pkg *Package) Get() error {
 		return err
 	}
 
-	log.Successf("Installed %s %s.\n", pkg.Definition.Name, remote)
+	log.Successf("installed %s %s in %s\n", pkg.Definition.Name, remote, time.Since(installStarted).Round(time.Millisecond))
 
 	return nil
 }
@@ -86,10 +92,14 @@ func (pkg *Package) Remove() error {
 	}
 
 	if !installed {
-		log.Subf("%s is not installed.\n", pkg.Definition.Name)
+		log.Infof("%s: not installed\n", pkg.Definition.Name)
 
 		return nil
 	}
+
+	log.Stepf("removing %s\n", pkg.Definition.Name)
+
+	removeStarted := time.Now()
 
 	switch pkg.Definition.Source {
 	case "go":
@@ -113,7 +123,7 @@ func (pkg *Package) Remove() error {
 		return err
 	}
 
-	log.Successf("Removed %s.\n", pkg.Definition.Name)
+	log.Successf("removed %s in %s\n", pkg.Definition.Name, time.Since(removeStarted).Round(time.Millisecond))
 
 	return nil
 }
@@ -232,7 +242,7 @@ func ResolvePackage(definition *catalog.Package) (*Package, error) {
 		programFiles := os.Getenv("ProgramFiles")
 
 		if strings.Contains(path, "{programfiles}") && !filepath.IsAbs(programFiles) {
-			return nil, errors.New("ProgramFiles must be an absolute path for MSI installers")
+			return nil, errors.New("programfiles must be absolute for msi installs")
 		}
 
 		replacer := strings.NewReplacer("{home}", home, "{bin}", filepath.Dir(GetLocalBinaryPath(definition.Binary)), "{programfiles}", programFiles)

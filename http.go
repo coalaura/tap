@@ -73,7 +73,7 @@ func downloadToFile(url, expectedHash string, file *os.File) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("download returned %s", resp.Status)
+		return fmt.Errorf("download returned %s", strings.ToLower(resp.Status))
 	}
 
 	if resp.ContentLength > MaxDownloadSize {
@@ -122,7 +122,7 @@ func ReadResponse(resp *http.Response, limit int64) ([]byte, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("request returned %s", resp.Status)
+		return nil, fmt.Errorf("request returned %s", strings.ToLower(resp.Status))
 	}
 
 	reader := io.LimitReader(resp.Body, limit+1)

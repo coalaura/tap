@@ -34,6 +34,8 @@ Installed status is discovered from each package's configured path, including in
 
 Use administrator privileges for Windows MSI installers and appropriate permissions for Linux's `/usr/local` locations. Under `sudo`, user-local paths refer to the invoking user's home and retain that user's ownership. Put the relevant binary directories on `PATH` to run the installed tools.
 
+Tap warns before running commands if `%USERPROFILE%\.bin` on Windows or `/usr/local/bin` on Linux is missing from `PATH`.
+
 `rm` removes a package's executables or the complete toolchain directory for Go and Zig. Bun's cache, configuration and other user data remain in place. On Windows, removing Go or Rio downloads the matching official MSI and uninstalls it through Windows Installer; this requires network access and an MSI-installed distribution.
 
 `findutils` installs `find`, `locate`, `updatedb` and `xargs` together. `diffutils` installs its multi-call binary, used as `diffutils diff ...` or `diffutils cmp ...`. `age` installs both `age` and `age-keygen`. Companion executables are installed beside the primary binary and removed with the package; a missing companion triggers reinstallation on the next `get`.

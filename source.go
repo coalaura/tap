@@ -65,7 +65,7 @@ func FetchLatestGoVersion() (semver.SemVer, error) {
 	}
 
 	if latest.IsInvalid() {
-		return semver.Invalid, errors.New("no latest Go version found")
+		return semver.Invalid, errors.New("no stable go version found")
 	}
 
 	return latest, nil
@@ -103,7 +103,7 @@ func FetchLatestZigVersion() (semver.SemVer, error) {
 	}
 
 	if latest.IsInvalid() {
-		return semver.Invalid, errors.New("no latest Zig version found")
+		return semver.Invalid, errors.New("no stable zig version found")
 	}
 
 	return latest, nil
@@ -180,7 +180,7 @@ func FetchZigFile(ver semver.SemVer) (*ZigFile, error) {
 	}
 
 	if file.Tarball == "" {
-		return nil, errors.New("zig metadata is missing tarball URL")
+		return nil, errors.New("zig metadata missing tarball url")
 	}
 
 	_, err = parseSHA256(file.SHA256)
