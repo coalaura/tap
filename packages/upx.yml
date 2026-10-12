@@ -1,0 +1,7 @@
+description: The Ultimate Packer for eXecutables
+repository: upx/upx
+platforms:
+  linux-amd64:
+    asset: upx-{version}-amd64_linux.tar.xz
+  windows-amd64:
+    asset: upx-{version}-win64.zip

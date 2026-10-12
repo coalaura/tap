@@ -1,0 +1,7 @@
+description: A cross-shell command prompt
+repository: starship/starship
+platforms:
+  linux-amd64:
+    asset: starship-x86_64-unknown-linux-gnu.tar.gz
+  windows-amd64:
+    asset: starship-x86_64-pc-windows-msvc.zip

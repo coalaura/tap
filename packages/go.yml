@@ -1,0 +1,3 @@
+description: The Go programming language
+source: go
+args: [version]

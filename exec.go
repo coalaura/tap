@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"os/exec"
 	"time"
 
@@ -18,32 +17,17 @@ const (
 	InstallCommandTimeout = 15 * time.Minute
 )
 
-func (u *UpgradeConfig) ResolveCurrentVersion() (semver.SemVer, error) {
-	path := u.Path
-
-	if path == "" {
-		var err error
-
-		path, err = exec.LookPath(u.Binary)
-		if err != nil {
-			if errors.Is(err, exec.ErrNotFound) {
-				return semver.NewEmptySemVer(), nil
-			}
-
-			return semver.Invalid, err
-		}
-	} else {
-		_, err := os.Stat(path)
-		if err != nil {
-			if errors.Is(err, os.ErrNotExist) {
-				return semver.NewEmptySemVer(), nil
-			}
-
-			return semver.Invalid, err
-		}
+func (pkg *Package) ResolveCurrentVersion() (semver.SemVer, error) {
+	installed, err := pkg.IsInstalled()
+	if err != nil {
+		return semver.Invalid, err
 	}
 
-	return ResolveBinaryVersion(path, u.Args)
+	if !installed {
+		return semver.NewEmptySemVer(), nil
+	}
+
+	return ResolveBinaryVersion(pkg.Path, pkg.Definition.Args)
 }
 
 func ResolveBinaryVersion(path string, args []string) (semver.SemVer, error) {
@@ -111,7 +95,7 @@ func RunCommandOrError(bin string, args ...string) error {
 			return err
 		}
 
-		return fmt.Errorf("%v: %s", err, string(out))
+		return fmt.Errorf("%w: %s", err, string(out))
 	}
 
 	return nil

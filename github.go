@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/coalaura/semver"
@@ -26,83 +25,38 @@ type GitHubRelease struct {
 	Assets     []GitHubAsset `json:"assets"`
 }
 
-type GitHubTag struct {
-	Name string `json:"name"`
-}
-
-func (u *UpgradeConfig) FetchLatestVersion() (semver.SemVer, error) {
-	if u.Resolver != nil {
-		return u.Resolver()
+func (pkg *Package) FetchLatestVersion() (semver.SemVer, error) {
+	switch pkg.Definition.Source {
+	case "go":
+		return FetchLatestGoVersion()
+	case "zig":
+		return FetchLatestZigVersion()
 	}
 
-	endpoint := "tags"
+	endpoint := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", pkg.Definition.Repository)
 
-	if u.Releases {
-		endpoint = "releases"
+	resp, err := githubRequest(endpoint)
+	if err != nil {
+		return semver.Invalid, err
 	}
 
-	next := fmt.Sprintf("https://api.github.com/repos/%s/%s?per_page=100", u.Repository, endpoint)
-
-	latest := semver.Invalid
-
-	for next != "" {
-		resp, err := githubRequest(next)
-		if err != nil {
-			return semver.Invalid, err
-		}
-
-		body, err := ReadResponse(resp, MaxMetadataSize)
-		if err != nil {
-			return semver.Invalid, err
-		}
-
-		var names []string
-
-		if u.Releases {
-			var releases []GitHubRelease
-
-			err = json.Unmarshal(body, &releases)
-			if err != nil {
-				return semver.Invalid, err
-			}
-
-			for _, release := range releases {
-				if !release.Draft && !release.Prerelease {
-					names = append(names, release.TagName)
-				}
-			}
-		} else {
-			var tags []GitHubTag
-
-			err = json.Unmarshal(body, &tags)
-			if err != nil {
-				return semver.Invalid, err
-			}
-
-			for _, tag := range tags {
-				names = append(names, tag.Name)
-			}
-		}
-
-		for _, name := range names {
-			version, err := ParseVersionTag(name, u.Prefix)
-			if err != nil {
-				continue
-			}
-
-			if latest.IsInvalid() || version.HigherThan(latest) {
-				latest = version
-			}
-		}
-
-		next = ""
+	body, err := ReadResponse(resp, MaxMetadataSize)
+	if err != nil {
+		return semver.Invalid, err
 	}
 
-	if latest.IsInvalid() {
-		return semver.Invalid, errors.New("no latest version found")
+	var release GitHubRelease
+
+	err = json.Unmarshal(body, &release)
+	if err != nil {
+		return semver.Invalid, err
 	}
 
-	return latest, nil
+	if release.Draft || release.Prerelease {
+		return semver.Invalid, errors.New("latest release is not stable")
+	}
+
+	return ParseVersionTag(release.TagName, pkg.Definition.Prefix)
 }
 
 func DownloadGitHubAssetTemp(repository, tag, asset, ext string) (string, error) {
@@ -112,32 +66,6 @@ func DownloadGitHubAssetTemp(repository, tag, asset, ext string) (string, error)
 	}
 
 	return DownloadTempFile(info.URL, ext, info.Digest)
-}
-
-func InstallGitHubExecutable(repository, tag, asset, path string, ver semver.SemVer, args []string) error {
-	info, err := FetchGitHubAsset(repository, tag, asset)
-	if err != nil {
-		return err
-	}
-
-	tmp, err := DownloadTempFile(info.URL, filepath.Ext(asset), info.Digest)
-	if err != nil {
-		return err
-	}
-
-	defer os.Remove(tmp)
-
-	err = os.Chmod(tmp, 0755)
-	if err != nil {
-		return err
-	}
-
-	err = ValidateBinary(tmp, args, ver)
-	if err != nil {
-		return err
-	}
-
-	return CopyFileMode(tmp, path, 0755)
 }
 
 func FetchGitHubAsset(repository, tag, name string) (*GitHubAsset, error) {
@@ -182,7 +110,7 @@ func githubRequest(uri string) (*http.Response, error) {
 		return nil, err
 	}
 
-	req.Header.Set("User-Agent", "env-upgrader/1.0")
+	req.Header.Set("User-Agent", "tap/"+Version)
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
 

@@ -30,7 +30,7 @@ var (
 )
 
 func DownloadTempFile(url, ext, expectedHash string) (string, error) {
-	file, err := os.CreateTemp("", "upgrader-*"+ext)
+	file, err := os.CreateTemp("", "tap-*"+ext)
 	if err != nil {
 		return "", err
 	}
@@ -63,7 +63,7 @@ func downloadToFile(url, expectedHash string, file *os.File) error {
 		return err
 	}
 
-	req.Header.Set("User-Agent", "env-upgrader/1.0")
+	req.Header.Set("User-Agent", "tap/"+Version)
 
 	resp, err := downloadClient.Do(req)
 	if err != nil {

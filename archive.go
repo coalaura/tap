@@ -5,6 +5,7 @@ import (
 	"archive/zip"
 	"compress/gzip"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path"
@@ -262,26 +263,28 @@ func FindFile(root, name string) (string, error) {
 			return err
 		}
 
-		if info.IsDir() {
+		if !info.Mode().IsRegular() {
 			return nil
 		}
 
 		if strings.EqualFold(info.Name(), name) {
-			found = path
+			if found != "" {
+				return fmt.Errorf("multiple files named %s in archive; specify executable in the package definition", name)
+			}
 
-			return io.EOF
+			found = path
 		}
 
 		return nil
 	})
 
 	if err != nil {
-		if errors.Is(err, io.EOF) {
-			return found, nil
-		}
-
 		return "", err
 	}
 
-	return "", os.ErrNotExist
+	if found == "" {
+		return "", fmt.Errorf("%s not found in archive: %w", name, os.ErrNotExist)
+	}
+
+	return found, nil
 }

@@ -1,0 +1,10 @@
+description: Cross-platform GNU coreutils written in Rust
+repository: uutils/coreutils
+prefix: ''
+platforms:
+  linux-amd64:
+    asset: coreutils-{version}-x86_64-unknown-linux-gnu.tar.gz
+    executable: coreutils-{version}-x86_64-unknown-linux-gnu/coreutils
+  windows-amd64:
+    asset: coreutils-{version}-x86_64-pc-windows-msvc.zip
+    executable: coreutils-{version}-x86_64-pc-windows-msvc/coreutils.exe

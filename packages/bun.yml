@@ -1,0 +1,12 @@
+description: A JavaScript runtime, bundler, test runner and package manager
+repository: oven-sh/bun
+prefix: bun-v
+platforms:
+  linux-amd64:
+    asset: bun-linux-x64.zip
+    executable: bun-linux-x64/bun
+    path: '{home}/.bun/bin/bun'
+  windows-amd64:
+    asset: bun-windows-x64.zip
+    executable: bun-windows-x64/bun.exe
+    path: '{home}/.bun/bin/bun.exe'
