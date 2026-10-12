@@ -82,7 +82,7 @@ func removePackages(ctx context.Context, command *cli.Command) error {
 
 func applyPackages(ctx context.Context, command *cli.Command, action func(*Package) error) error {
 	if command.Args().Len() == 0 {
-		return fmt.Errorf("usage: tap %s <package>...", command.Name)
+		return fmt.Errorf("usage: tap %s <package> [<package>...]", command.Name)
 	}
 
 	packages, err := SelectPackages(command.Args().Slice())
@@ -172,7 +172,7 @@ func findPackages(ctx context.Context, command *cli.Command) error {
 
 func packageInfo(ctx context.Context, command *cli.Command) error {
 	if command.Args().Len() == 0 {
-		return errors.New("usage: tap info <package>...")
+		return errors.New("usage: tap info <package> [<package>...]")
 	}
 
 	packages, err := SelectPackages(command.Args().Slice())

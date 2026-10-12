@@ -61,6 +61,7 @@ func UpdateTap() error {
 	}
 
 	name := "tap-" + runtime.GOOS + "-" + runtime.GOARCH
+
 	if runtime.GOOS == "windows" {
 		name += ".exe"
 	}

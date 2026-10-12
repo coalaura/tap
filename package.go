@@ -103,6 +103,7 @@ func (pkg *Package) Remove() error {
 
 func (pkg *Package) Expand(value, version string) string {
 	extension := ""
+
 	if runtime.GOOS == "windows" {
 		extension = ".exe"
 	}
