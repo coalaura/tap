@@ -189,7 +189,7 @@ func packageInfo(ctx context.Context, command *cli.Command) error {
 
 		definition := pkg.Definition
 
-		fmt.Fprintf(writer, "%s — %s\nSource: %s\n", definition.Name, definition.Description, definition.Source)
+		fmt.Fprintf(writer, "%s - %s\nSource: %s\n", definition.Name, definition.Description, definition.Source)
 
 		if definition.Repository != "" {
 			fmt.Fprintf(writer, "Repository: https://github.com/%s\n", definition.Repository)
