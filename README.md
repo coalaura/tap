@@ -5,7 +5,8 @@ A small package manager for Windows and Linux (amd64), using a catalog compiled 
 ## Commands
 
 ```sh
-tap get go zig bun       # install or update named packages
+tap tap                 # update tap itself to the latest stable release
+tap get go zig bun      # install or update named packages
 tap rm bun              # remove named packages
 tap ls                  # list installed catalog packages and versions
 tap find                # show the complete catalog
@@ -16,6 +17,8 @@ tap --help
 ```
 
 `get`, `rm` and `info` accept multiple package names. Names are case-insensitive and unknown names are rejected before any packages are changed. Running `tap` without arguments shows help. `get` uses the latest stable upstream release and leaves an equal or newer installation alone.
+
+`tap tap` checks the latest stable `coalaura/tap` release and replaces the running executable in place, following symlinks. Equal or newer versions are left alone; a `dev` build installs the latest stable release. The download's SHA-256 digest and reported version are verified before replacement. Write access to the executable's directory is required. On Windows, the running executable is renamed to a `.tap-old` backup, restored if replacement fails and cleaned up by the next `tap tap` invocation if it remains locked.
 
 Installed status is discovered from each package's configured path, including installations made by the original upgrader. `ls` shows only catalog packages installed at those paths; `find` searches the entire catalog. `ls`, `find` and `info` work offline. Installed versions are read by invoking each binary with its configured version arguments. Tap does not inspect arbitrary programs elsewhere on `PATH`.
 

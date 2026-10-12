@@ -19,6 +19,11 @@ func NewCommand() *cli.Command {
 		Action:  showHelp,
 		Commands: []*cli.Command{
 			{
+				Name:   "tap",
+				Usage:  "Update tap itself to the latest stable release",
+				Action: updateTap,
+			},
+			{
 				Name:      "get",
 				Usage:     "Install packages or update them to the latest stable version",
 				ArgsUsage: "<package>...",
@@ -57,6 +62,14 @@ func showHelp(ctx context.Context, command *cli.Command) error {
 	}
 
 	return cli.ShowAppHelp(command)
+}
+
+func updateTap(ctx context.Context, command *cli.Command) error {
+	if command.Args().Len() != 0 {
+		return errors.New("usage: tap tap")
+	}
+
+	return UpdateTap()
 }
 
 func getPackages(ctx context.Context, command *cli.Command) error {

@@ -25,6 +25,24 @@ type GitHubRelease struct {
 	Assets     []GitHubAsset `json:"assets"`
 }
 
+func (release *GitHubRelease) FindAsset(name string) (*GitHubAsset, error) {
+	for index := range release.Assets {
+		asset := &release.Assets[index]
+		if asset.Name != name {
+			continue
+		}
+
+		_, err := parseSHA256(asset.Digest)
+		if err != nil {
+			return nil, fmt.Errorf("asset %s: %w", name, err)
+		}
+
+		return asset, nil
+	}
+
+	return nil, fmt.Errorf("asset %s not found in release %s", name, release.TagName)
+}
+
 func (pkg *Package) FetchLatestVersion() (semver.SemVer, error) {
 	switch pkg.Definition.Source {
 	case "go":
@@ -33,30 +51,27 @@ func (pkg *Package) FetchLatestVersion() (semver.SemVer, error) {
 		return FetchLatestZigVersion()
 	}
 
-	endpoint := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", pkg.Definition.Repository)
-
-	resp, err := githubRequest(endpoint)
+	release, err := FetchLatestGitHubRelease(pkg.Definition.Repository)
 	if err != nil {
 		return semver.Invalid, err
-	}
-
-	body, err := ReadResponse(resp, MaxMetadataSize)
-	if err != nil {
-		return semver.Invalid, err
-	}
-
-	var release GitHubRelease
-
-	err = json.Unmarshal(body, &release)
-	if err != nil {
-		return semver.Invalid, err
-	}
-
-	if release.Draft || release.Prerelease {
-		return semver.Invalid, errors.New("latest release is not stable")
 	}
 
 	return ParseVersionTag(release.TagName, pkg.Definition.Prefix)
+}
+
+func FetchLatestGitHubRelease(repository string) (*GitHubRelease, error) {
+	endpoint := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repository)
+
+	release, err := fetchGitHubRelease(endpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	if release.Draft || release.Prerelease {
+		return nil, errors.New("latest release is not stable")
+	}
+
+	return release, nil
 }
 
 func DownloadGitHubAssetTemp(repository, tag, asset, ext string) (string, error) {
@@ -71,6 +86,20 @@ func DownloadGitHubAssetTemp(repository, tag, asset, ext string) (string, error)
 func FetchGitHubAsset(repository, tag, name string) (*GitHubAsset, error) {
 	uri := fmt.Sprintf("https://api.github.com/repos/%s/releases/tags/%s", repository, url.PathEscape(tag))
 
+	release, err := fetchGitHubRelease(uri)
+	if err != nil {
+		return nil, err
+	}
+
+	asset, err := release.FindAsset(name)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", repository, err)
+	}
+
+	return asset, nil
+}
+
+func fetchGitHubRelease(uri string) (*GitHubRelease, error) {
 	resp, err := githubRequest(uri)
 	if err != nil {
 		return nil, err
@@ -88,20 +117,7 @@ func FetchGitHubAsset(repository, tag, name string) (*GitHubAsset, error) {
 		return nil, err
 	}
 
-	for _, asset := range release.Assets {
-		if asset.Name != name {
-			continue
-		}
-
-		_, err = parseSHA256(asset.Digest)
-		if err != nil {
-			return nil, fmt.Errorf("asset %s: %w", name, err)
-		}
-
-		return &asset, nil
-	}
-
-	return nil, fmt.Errorf("asset %s not found in %s release %s", name, repository, tag)
+	return &release, nil
 }
 
 func githubRequest(uri string) (*http.Response, error) {
