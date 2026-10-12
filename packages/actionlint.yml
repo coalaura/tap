@@ -1,0 +1,10 @@
+description: Static checker for GitHub Actions workflows
+repository: rhysd/actionlint
+args: [-version]
+platforms:
+  linux-amd64:
+    asset: actionlint_{version}_linux_amd64.tar.gz
+    executable: actionlint
+  windows-amd64:
+    asset: actionlint_{version}_windows_amd64.zip
+    executable: actionlint.exe

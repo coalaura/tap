@@ -1,0 +1,10 @@
+description: Cross-platform GNU grep written in Rust
+repository: uutils/grep
+prefix: ''
+platforms:
+  linux-amd64:
+    asset: uu_grep-x86_64-unknown-linux-gnu.tar.xz
+    executable: uu_grep-x86_64-unknown-linux-gnu/grep
+  windows-amd64:
+    asset: uu_grep-x86_64-pc-windows-msvc.zip
+    executable: grep.exe
