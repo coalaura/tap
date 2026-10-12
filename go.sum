@@ -1,0 +1,10 @@
+github.com/coalaura/plain v1.6.5 h1:rXJjk98he2OPc1+SEMtf/3jm4USYhCLjN0HcnebyqAU=
+github.com/coalaura/plain v1.6.5/go.mod h1:8RE9XMZjc0DdRt1/coC8bzwSPEeMWMi0fASj6X1pXx8=
+github.com/coalaura/semver v1.0.3 h1:G2ckt8r7tnGSvKgE5ewo9QgvMChH0B1o+OJj4fx52ds=
+github.com/coalaura/semver v1.0.3/go.mod h1:1LrfpJhpLnB081BVBkE/1sGkpQSrdA6N1TcvxujtsOM=
+github.com/ulikunitz/xz v0.5.17 h1:flR0y/x1hgM8EGV1AW3Xll6T413G0glV8UfBwR617V4=
+github.com/ulikunitz/xz v0.5.17/go.mod h1:H9Rt/W6/Qj27PGauhQc6nfCDy7vHpzsOThBSaYDoEhw=
+golang.org/x/sys v0.49.0 h1:XbzkgYJHdqh/8m2Uu0W/dQv8nktxx4BFHp1M0gROTXA=
+golang.org/x/sys v0.49.0/go.mod h1:hNLxWAXmnKAxqDtdwIYC4bM9oQPEecfsnNMuSxOs3og=
+golang.org/x/term v0.46.0 h1:3+OXuTbaKDgwk8jTi3aSLHRlmWqHEUDUtxnbFigO4YE=
+golang.org/x/term v0.46.0/go.mod h1:+K02xbkittuwc0Am4abfA3Fc+XRGXkvBXNO88NCXPoc=
