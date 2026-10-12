@@ -1,0 +1,10 @@
+# yaml-language-server: $schema=./schema.json
+
+description: Fast and simple video downloader
+repository: iawia002/lux
+checksums: lux_{version}_checksums.txt
+platforms:
+  linux-amd64:
+    asset: lux_{version}_Linux_x86_64.tar.gz
+  windows-amd64:
+    asset: lux_{version}_Windows_x86_64.zip

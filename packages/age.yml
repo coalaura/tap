@@ -1,0 +1,10 @@
+# yaml-language-server: $schema=./schema.json
+
+description: Simple, modern and secure file encryption
+repository: FiloSottile/age
+companions: [age-keygen]
+platforms:
+  linux-amd64:
+    asset: age-{tag}-linux-amd64.tar.gz
+  windows-amd64:
+    asset: age-{tag}-windows-amd64.zip

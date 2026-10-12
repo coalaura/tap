@@ -10,6 +10,14 @@ import (
 	"github.com/coalaura/semver"
 )
 
+func (pkg *Package) InstallMSI(path string) error {
+	return fmt.Errorf("%s requires Windows Installer", pkg.Definition.Name)
+}
+
+func (pkg *Package) RemoveMSI() error {
+	return fmt.Errorf("%s requires Windows Installer", pkg.Definition.Name)
+}
+
 func InstallGo(ver semver.SemVer) error {
 	path, err := DownloadGoFile(ver)
 	if err != nil {

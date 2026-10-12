@@ -1,0 +1,9 @@
+# yaml-language-server: $schema=./schema.json
+
+description: Hardware-accelerated GPU terminal emulator
+source: msi
+repository: raphamorim/rio
+platforms:
+  windows-amd64:
+    asset: rio-installer-x86_64.msi
+    path: '{programfiles}/Rio/rio.exe'

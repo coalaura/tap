@@ -1,0 +1,12 @@
+# yaml-language-server: $schema=./schema.json
+
+description: Cross-platform GNU find, locate, updatedb and xargs written in Rust
+repository: uutils/findutils
+prefix: ''
+binary: find
+companions: [locate, updatedb, xargs]
+platforms:
+  linux-amd64:
+    asset: findutils-x86_64-unknown-linux-gnu.tar.xz
+  windows-amd64:
+    asset: findutils-x86_64-pc-windows-msvc.zip

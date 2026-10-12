@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"time"
 
@@ -18,13 +19,21 @@ const (
 )
 
 func (pkg *Package) ResolveCurrentVersion() (semver.SemVer, error) {
-	installed, err := pkg.IsInstalled()
-	if err != nil {
-		return semver.Invalid, err
-	}
+	for index := range len(pkg.Definition.Companions) + 1 {
+		path := pkg.BinaryPath(index)
 
-	if !installed {
-		return semver.NewEmptySemVer(), nil
+		info, err := os.Stat(path)
+		if errors.Is(err, os.ErrNotExist) {
+			return semver.NewEmptySemVer(), nil
+		}
+
+		if err != nil {
+			return semver.Invalid, err
+		}
+
+		if !info.Mode().IsRegular() {
+			return semver.Invalid, fmt.Errorf("%s is not a regular file", path)
+		}
 	}
 
 	return ResolveBinaryVersion(pkg.Path, pkg.Definition.Args)

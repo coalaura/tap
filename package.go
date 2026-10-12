@@ -55,20 +55,28 @@ func (pkg *Package) Get() error {
 }
 
 func (pkg *Package) IsInstalled() (bool, error) {
-	info, err := os.Stat(pkg.Path)
-	if errors.Is(err, os.ErrNotExist) {
-		return false, nil
+	var installed bool
+
+	for index := range len(pkg.Definition.Companions) + 1 {
+		path := pkg.BinaryPath(index)
+
+		info, err := os.Stat(path)
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+
+		if err != nil {
+			return false, err
+		}
+
+		if !info.Mode().IsRegular() {
+			return false, fmt.Errorf("%s is not a regular file", path)
+		}
+
+		installed = true
 	}
 
-	if err != nil {
-		return false, err
-	}
-
-	if !info.Mode().IsRegular() {
-		return false, fmt.Errorf("%s is not a regular file", pkg.Path)
-	}
-
-	return true, nil
+	return installed, nil
 }
 
 func (pkg *Package) Remove() error {
@@ -88,8 +96,17 @@ func (pkg *Package) Remove() error {
 		err = RemoveGo()
 	case "zig":
 		err = os.RemoveAll(filepath.Dir(pkg.Path))
+	case "msi":
+		err = pkg.RemoveMSI()
 	default:
-		err = os.Remove(pkg.Path)
+		for index := range len(pkg.Definition.Companions) + 1 {
+			err = os.Remove(pkg.BinaryPath(index))
+			if err != nil && !errors.Is(err, os.ErrNotExist) {
+				return err
+			}
+		}
+
+		err = nil
 	}
 
 	if err != nil {
@@ -111,6 +128,20 @@ func (pkg *Package) Expand(value, version string) string {
 	replacer := strings.NewReplacer("{name}", pkg.Definition.Name, "{binary}", pkg.Definition.Binary, "{version}", version, "{tag}", pkg.Definition.Prefix+version, "{os}", runtime.GOOS, "{arch}", runtime.GOARCH, "{ext}", extension)
 
 	return replacer.Replace(value)
+}
+
+func (pkg *Package) BinaryPath(index int) string {
+	if index == 0 {
+		return pkg.Path
+	}
+
+	name := pkg.Definition.Companions[index-1]
+
+	if runtime.GOOS == "windows" {
+		name += ".exe"
+	}
+
+	return filepath.Join(filepath.Dir(pkg.Path), name)
 }
 
 func SelectPackages(names []string) ([]*Package, error) {
@@ -198,7 +229,13 @@ func ResolvePackage(definition *catalog.Package) (*Package, error) {
 		pkg.Path = GetZigBinaryPath()
 	default:
 		path := pkg.Expand(target.Path, "")
-		replacer := strings.NewReplacer("{home}", home, "{bin}", filepath.Dir(GetLocalBinaryPath(definition.Binary)))
+		programFiles := os.Getenv("ProgramFiles")
+
+		if strings.Contains(path, "{programfiles}") && !filepath.IsAbs(programFiles) {
+			return nil, errors.New("ProgramFiles must be an absolute path for MSI installers")
+		}
+
+		replacer := strings.NewReplacer("{home}", home, "{bin}", filepath.Dir(GetLocalBinaryPath(definition.Binary)), "{programfiles}", programFiles)
 		pkg.Path = filepath.Clean(filepath.FromSlash(replacer.Replace(path)))
 	}
 

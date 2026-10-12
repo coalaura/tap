@@ -19,7 +19,7 @@ func validatePackage(definition *catalog.Package) error {
 	}
 
 	switch definition.Source {
-	case "github":
+	case "github", "msi":
 		owner, repository, ok := strings.Cut(definition.Repository, "/")
 		if !ok || !validRepositoryPart(owner) || !validRepositoryPart(repository) {
 			return errors.New("repository must be owner/name")
@@ -29,7 +29,41 @@ func validatePackage(definition *catalog.Package) error {
 			return errors.New("go and zig sources require the matching binary name")
 		}
 	default:
-		return fmt.Errorf("unknown source %q (expected github, go or zig)", definition.Source)
+		return fmt.Errorf("unknown source %q (expected github, msi, go or zig)", definition.Source)
+	}
+
+	if len(definition.Companions) != 0 && definition.Source != "github" {
+		return errors.New("companions require the github source")
+	}
+
+	commands := make(map[string]struct{}, len(definition.Companions)+1)
+	commands[definition.Binary] = struct{}{}
+
+	for _, companion := range definition.Companions {
+		if !validName(companion) {
+			return fmt.Errorf("invalid companion binary %q", companion)
+		}
+
+		if _, exists := commands[companion]; exists {
+			return fmt.Errorf("duplicate binary %q", companion)
+		}
+
+		commands[companion] = struct{}{}
+	}
+
+	if definition.Checksums != "" {
+		if definition.Source != "github" && definition.Source != "msi" {
+			return errors.New("checksums require the github or msi source")
+		}
+
+		err := validateTemplate(definition.Checksums, false)
+		if err != nil {
+			return fmt.Errorf("checksums: %w", err)
+		}
+
+		if strings.ContainsAny(definition.Checksums, "/\\") {
+			return errors.New("checksums must be a filename")
+		}
 	}
 
 	if len(definition.Platforms) == 0 {
@@ -39,6 +73,14 @@ func validatePackage(definition *catalog.Package) error {
 	for platform, target := range definition.Platforms {
 		if platform != "windows-amd64" && platform != "linux-amd64" {
 			return fmt.Errorf("unsupported platform %q", platform)
+		}
+
+		if definition.Source == "msi" && platform != "windows-amd64" {
+			return errors.New("msi requires windows-amd64")
+		}
+
+		if strings.Contains(target.Path, "{programfiles}") && (definition.Source != "msi" || platform != "windows-amd64") {
+			return errors.New("{programfiles} requires a Windows MSI installer")
 		}
 
 		err := validateTarget(definition, &target)
@@ -53,7 +95,7 @@ func validatePackage(definition *catalog.Package) error {
 }
 
 func validateTarget(definition *catalog.Package, target *catalog.Target) error {
-	if definition.Source != "github" {
+	if definition.Source == "go" || definition.Source == "zig" {
 		if target.Asset != "" || target.Executable != "" || target.Path != "" {
 			return errors.New("go and zig use their official downloads and fixed install locations")
 		}
@@ -63,6 +105,12 @@ func validateTarget(definition *catalog.Package, target *catalog.Target) error {
 
 	if target.Asset == "" {
 		target.Asset = definition.Asset
+	}
+
+	if definition.Source == "msi" {
+		if !strings.HasSuffix(target.Asset, ".msi") || target.Executable != "" || target.Path == "" {
+			return errors.New("msi requires an .msi asset, an explicit install path and no archive executable")
+		}
 	}
 
 	if target.Path == "" {
@@ -92,8 +140,9 @@ func validateTarget(definition *catalog.Package, target *catalog.Target) error {
 		return fmt.Errorf("path: %w", err)
 	}
 
-	if !strings.HasPrefix(target.Path, "{bin}/") && !strings.HasPrefix(target.Path, "{home}/") {
-		return errors.New("path must start with {bin}/ or {home}/")
+	programFilesPath := definition.Source == "msi" && strings.HasPrefix(target.Path, "{programfiles}/")
+	if !strings.HasPrefix(target.Path, "{bin}/") && !strings.HasPrefix(target.Path, "{home}/") && !programFilesPath {
+		return errors.New("path must start with {bin}/ or {home}/, or {programfiles}/ for MSI installers")
 	}
 
 	if !validRelativePath(target.Path) {
@@ -125,7 +174,7 @@ func validateTemplate(value string, installPath bool) error {
 			if installPath {
 				return errors.New("install paths cannot depend on a version")
 			}
-		case "bin", "home":
+		case "bin", "home", "programfiles":
 			if !installPath {
 				return fmt.Errorf("{%s} is only valid in install paths", variable)
 			}

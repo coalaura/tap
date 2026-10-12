@@ -12,6 +12,26 @@ import (
 	"github.com/coalaura/semver"
 )
 
+func (pkg *Package) InstallMSI(path string) error {
+	return RunMSI("/i", path)
+}
+
+func (pkg *Package) RemoveMSI() error {
+	version, err := ResolveBinaryVersion(pkg.Path, pkg.Definition.Args)
+	if err != nil {
+		return err
+	}
+
+	path, err := pkg.Download(version)
+	if err != nil {
+		return err
+	}
+
+	defer os.Remove(path)
+
+	return RunMSI("/x", path)
+}
+
 func InstallGo(ver semver.SemVer) error {
 	path, err := DownloadGoFile(ver)
 	if err != nil {

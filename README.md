@@ -29,11 +29,14 @@ Installed status is discovered from each package's configured path, including in
 | Go | `%ProgramFiles%\Go` (official MSI) | `/usr/local/go` |
 | Zig | `%USERPROFILE%\.zig` | `/usr/local/zig` |
 | Bun | `%USERPROFILE%\.bun\bin\bun.exe` | `~/.bun/bin/bun` |
+| Rio | `%ProgramFiles%\Rio\rio.exe` (official MSI) | Not supported |
 | Other executables | `%USERPROFILE%\.bin\<binary>.exe` | `/usr/local/bin/<binary>` |
 
-Use administrator privileges for Go's Windows MSI and appropriate permissions for Linux's `/usr/local` locations. Under `sudo`, user-local paths refer to the invoking user's home and retain that user's ownership. Put the relevant binary directories on `PATH` to run the installed tools.
+Use administrator privileges for Windows MSI installers and appropriate permissions for Linux's `/usr/local` locations. Under `sudo`, user-local paths refer to the invoking user's home and retain that user's ownership. Put the relevant binary directories on `PATH` to run the installed tools.
 
-`rm` removes a package's executable or the complete toolchain directory for Go and Zig. Bun's cache, configuration and other user data remain in place. On Windows, removing Go downloads the matching official MSI and uninstalls it through Windows Installer; this requires network access and an MSI-installed Go distribution.
+`rm` removes a package's executables or the complete toolchain directory for Go and Zig. Bun's cache, configuration and other user data remain in place. On Windows, removing Go or Rio downloads the matching official MSI and uninstalls it through Windows Installer; this requires network access and an MSI-installed distribution.
+
+`findutils` installs `find`, `locate`, `updatedb` and `xargs` together. `diffutils` installs its multi-call binary, used as `diffutils diff ...` or `diffutils cmp ...`. `age` installs both `age` and `age-keygen`. Companion executables are installed beside the primary binary and removed with the package; a missing companion triggers reinstallation on the next `get`.
 
 ## Define packages
 
@@ -74,20 +77,24 @@ Supported fields:
 | --- | --- |
 | `name` | Override the filename-derived package name. |
 | `description` | Required description used by `find` and `info`. |
-| `source` | `github` (default), `go` or `zig`. Go and Zig use official downloads and dedicated toolchain installers. |
-| `repository` | GitHub `owner/repository`; required for the GitHub source. |
+| `source` | `github` (default), `msi`, `go` or `zig`. MSI uses a GitHub-hosted Windows installer; Go and Zig use official downloads and dedicated toolchain installers. |
+| `repository` | GitHub `owner/repository`; required for the GitHub and MSI sources. |
 | `prefix` | Release tag prefix; defaults to `v`. Use `prefix: ''` for bare version tags. |
 | `binary` | Executable name without `.exe`; defaults to the filename stem. |
+| `companions` | Additional executable names in a verified GitHub archive, installed beside the primary binary; defaults to none. |
 | `args` | Version arguments; defaults to `[--version]` or `[version]` for Go and Zig. |
 | `asset` | Default GitHub asset template, overridden by platform entries. |
+| `checksums` | Release asset containing GNU-style SHA-256 sums, used when the download asset has no GitHub digest. |
 | `platforms` | Map of `linux-amd64` and/or `windows-amd64` entries. Omit it to support both. |
 | `platforms.<platform>.asset` | Platform-specific GitHub asset template. |
 | `platforms.<platform>.executable` | Relative executable path within an archive. Omit it to find a unique matching binary filename. |
-| `platforms.<platform>.path` | Destination file; defaults to `{bin}/{binary}{ext}`. Must start with `{bin}/` or `{home}/`. |
+| `platforms.<platform>.path` | Destination file; defaults to `{bin}/{binary}{ext}`. Must start with `{bin}/` or `{home}/`, or `{programfiles}/` for MSI installers. MSI requires an explicit path matching the installer's destination. |
 
-Asset and archive-executable templates support `{name}`, `{binary}`, `{version}`, `{tag}`, `{os}`, `{arch}` and `{ext}`. `{version}` excludes the tag prefix; `{tag}` includes it. `{ext}` is `.exe` on Windows and empty on Linux. Destination templates additionally support `{bin}` and `{home}`, but cannot contain version-dependent placeholders. Use forward slashes in YAML paths. For example, Bun uses `path: '{home}/.bun/bin/{binary}{ext}'`.
+Asset, checksum and archive-executable templates support `{name}`, `{binary}`, `{version}`, `{tag}`, `{os}`, `{arch}` and `{ext}`. `{version}` excludes the tag prefix; `{tag}` includes it. `{ext}` is `.exe` on Windows and empty on Linux. Destination templates additionally support `{bin}` and `{home}`, plus `{programfiles}` for MSI installers, but cannot contain version-dependent placeholders. Use forward slashes in YAML paths. For example, Bun uses `path: '{home}/.bun/bin/{binary}{ext}'`.
 
-GitHub packages support raw executables and `.zip`, `.tar.gz` or `.tar.xz` archives containing a single executable to install. Additional runtime files are not installed by this source. Archives are extracted within bounded temporary directories, SHA-256 digests are verified and candidate binaries must report the expected version before replacing existing executables. GitHub release assets must provide a SHA-256 `digest`; Go and Zig use their official checksum metadata. Set `GITHUB_TOKEN` when authenticated GitHub API access is needed.
+GitHub packages support raw executables and `.zip`, `.tar.gz` or `.tar.xz` archives containing the primary executable and any configured companions. Additional runtime files are not installed by this source. Archives are extracted within bounded temporary directories, SHA-256 digests are verified, companions must be present and the primary binary must report the expected version before replacing existing executables. GitHub release assets must provide a SHA-256 `digest` or a configured checksum file; Go and Zig use their official checksum metadata. Set `GITHUB_TOKEN` when authenticated GitHub API access is needed.
+
+The `msi` source supports only `windows-amd64`, requires an `.msi` asset and uses Windows Installer for installation and removal. Tap verifies the download's SHA-256 digest before running the installer and checks the installed binary's version afterwards. Rio uses its official `rio-installer-x86_64.msi`, which manages its files, shortcuts and PATH registration.
 
 ## Generate and build
 

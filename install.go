@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/coalaura/semver"
@@ -18,14 +19,17 @@ func (pkg *Package) Install(version semver.SemVer) error {
 	}
 
 	asset := pkg.Expand(pkg.Target.Asset, version.String())
-	tag := pkg.Definition.Prefix + version.String()
 
-	path, err := DownloadGitHubAssetTemp(pkg.Definition.Repository, tag, asset, filepath.Ext(asset))
+	path, err := pkg.Download(version)
 	if err != nil {
 		return err
 	}
 
 	defer os.Remove(path)
+
+	if pkg.Definition.Source == "msi" {
+		return pkg.InstallMSI(path)
+	}
 
 	directory, err := os.MkdirTemp("", "tap-*")
 	if err != nil {
@@ -39,11 +43,24 @@ func (pkg *Package) Install(version semver.SemVer) error {
 		return err
 	}
 
-	err = os.Chmod(source, 0755)
-	if err != nil {
-		return err
+	sources := make([]string, len(pkg.Definition.Companions)+1)
+	sources[0] = source
+
+	for index := range pkg.Definition.Companions {
+		sources[index+1], err = FindFile(directory, filepath.Base(pkg.BinaryPath(index+1)))
+		if err != nil {
+			return err
+		}
 	}
 
+	for _, source := range sources {
+		err = os.Chmod(source, 0755)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Companions share the verified archive; only the primary binary is the version probe.
 	err = ValidateBinary(source, pkg.Definition.Args, version)
 	if err != nil {
 		return err
@@ -54,13 +71,21 @@ func (pkg *Package) Install(version semver.SemVer) error {
 		return err
 	}
 
-	err = CopyFileMode(source, pkg.Path, 0755)
-	if err != nil {
-		return err
-	}
+	// Install the version-probe binary last so an interrupted update is retried.
+	for index, source := range slices.Backward(sources) {
+		destination := pkg.BinaryPath(index)
 
-	if strings.HasPrefix(pkg.Target.Path, "{home}/") {
-		return ChownToInvokingUser(pkg.Path)
+		err = CopyFileMode(source, destination, 0755)
+		if err != nil {
+			return err
+		}
+
+		if strings.HasPrefix(pkg.Target.Path, "{home}/") {
+			err = ChownToInvokingUser(destination)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil

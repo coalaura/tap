@@ -17,13 +17,13 @@
 			"pattern": "\\S"
 		},
 		"source": {
-			"description": "GitHub releases or the dedicated Go/Zig installer using official downloads.",
+			"description": "GitHub releases, a GitHub-hosted Windows MSI, or the dedicated Go/Zig installer using official downloads.",
 			"type": "string",
-			"enum": ["github", "go", "zig"],
+			"enum": ["github", "msi", "go", "zig"],
 			"default": "github"
 		},
 		"repository": {
-			"description": "GitHub owner/repository. Required when source is github or omitted.",
+			"description": "GitHub owner/repository. Required when source is github, msi or omitted.",
 			"type": "string",
 			"pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*/[A-Za-z0-9][A-Za-z0-9._-]*$",
 			"examples": ["coalaura/builder"]
@@ -45,10 +45,23 @@
 				"type": "string"
 			}
 		},
+		"companions": {
+			"description": "Additional executable names found in the same verified GitHub archive, installed beside the primary binary and removed with it.",
+			"type": "array",
+			"uniqueItems": true,
+			"items": {
+				"type": "string",
+				"pattern": "^[a-z0-9][a-z0-9._-]*$"
+			}
+		},
 		"asset": {
 			"description": "Default GitHub release asset template, overridden by platform entries.",
 			"allOf": [{"$ref": "#/definitions/asset"}],
 			"default": "{binary}-{os}-{arch}{ext}"
+		},
+		"checksums": {
+			"description": "GitHub release asset containing GNU-style SHA-256 sums. Used only when a download asset has no GitHub digest. Supports the same placeholders as asset.",
+			"allOf": [{"$ref": "#/definitions/asset"}]
 		},
 		"platforms": {
 			"description": "Supported platforms and their overrides. Omit this map to support both Linux and Windows amd64.",
@@ -72,6 +85,7 @@
 			"then": {
 				"properties": {
 					"args": {"default": ["version"]},
+					"checksums": {"const": ""},
 					"platforms": {
 						"type": "object",
 						"additionalProperties": {"$ref": "#/definitions/toolchainTarget"}
@@ -110,6 +124,57 @@
 					"binary": {"const": "zig"}
 				}
 			}
+		},
+		{
+			"if": {
+				"required": ["source"],
+				"properties": {
+					"source": {"enum": ["msi", "go", "zig"]}
+				}
+			},
+			"then": {
+				"properties": {
+					"companions": {"maxItems": 0}
+				}
+			}
+		},
+		{
+			"if": {
+				"required": ["source"],
+				"properties": {
+					"source": {"const": "msi"}
+				}
+			},
+			"then": {
+				"required": ["platforms"],
+				"properties": {
+					"platforms": {
+						"required": ["windows-amd64"],
+						"properties": {
+							"linux-amd64": false,
+							"windows-amd64": {
+								"required": ["path"],
+								"properties": {
+									"asset": {"pattern": "(?:^$|\\.msi$)"},
+									"executable": {"const": ""},
+									"path": {"pattern": "^\\{(?:bin|home|programfiles)\\}/"}
+								}
+							}
+						}
+					}
+				}
+			},
+			"else": {
+				"properties": {
+					"platforms": {
+						"additionalProperties": {
+							"properties": {
+								"path": {"pattern": "^(?:$|\\{(?:bin|home)\\}/)(?:[^{}]|\\{(?:name|binary|os|arch|ext|bin|home)\\})*$"}
+							}
+						}
+					}
+				}
+			}
 		}
 	],
 	"definitions": {
@@ -144,7 +209,7 @@
 					]
 				},
 				"path": {
-					"description": "Destination executable path, starting with {bin}/ or {home}/. Supports {name}, {binary}, {os}, {arch}, {ext}, {bin} and {home}; version-dependent paths are not allowed. Empty values use the default.",
+					"description": "Destination executable path, starting with {bin}/ or {home}/, or {programfiles}/ for MSI installers. Supports {name}, {binary}, {os}, {arch}, {ext}, {bin}, {home} and {programfiles}; version-dependent paths are not allowed. Empty values use the default, except MSI paths must be explicit.",
 					"default": "{bin}/{binary}{ext}",
 					"anyOf": [
 						{"const": ""},
@@ -153,7 +218,7 @@
 								{"$ref": "#/definitions/relativePath"},
 								{
 									"type": "string",
-									"pattern": "^\\{(?:bin|home)\\}/(?:[^{}]|\\{(?:name|binary|os|arch|ext|bin|home)\\})*$"
+									"pattern": "^\\{(?:bin|home|programfiles)\\}/(?:[^{}]|\\{(?:name|binary|os|arch|ext|bin|home|programfiles)\\})*$"
 								}
 							]
 						}
