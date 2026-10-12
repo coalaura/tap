@@ -1,2 +1,4 @@
+# yaml-language-server: $schema=./schema.json
+
 description: Generate license files
 repository: coalaura/license

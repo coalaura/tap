@@ -1,3 +1,5 @@
+# yaml-language-server: $schema=./schema.json
+
 description: Cross-platform GNU coreutils written in Rust
 repository: uutils/coreutils
 prefix: ''

@@ -1,2 +1,4 @@
+# yaml-language-server: $schema=./schema.json
+
 description: Update GitHub Actions workflows
 repository: coalaura/actup

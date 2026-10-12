@@ -1,3 +1,5 @@
+# yaml-language-server: $schema=./schema.json
+
 description: Measure command execution time
 repository: coalaura/time
 asset: '{binary}_v{version}_{os}_{arch}{ext}'

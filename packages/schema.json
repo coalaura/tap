@@ -1,0 +1,175 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema",
+	"title": "Tap package",
+	"description": "A package definition compiled into Tap's catalog by go generate.",
+	"type": "object",
+	"additionalProperties": false,
+	"required": ["description"],
+	"properties": {
+		"name": {
+			"description": "Package name. Defaults to the YAML filename without .yml.",
+			"type": "string",
+			"pattern": "^[a-z0-9][a-z0-9._-]*$"
+		},
+		"description": {
+			"description": "Short description displayed by tap find and tap info.",
+			"type": "string",
+			"pattern": "\\S"
+		},
+		"source": {
+			"description": "GitHub releases or the dedicated Go/Zig installer using official downloads.",
+			"type": "string",
+			"enum": ["github", "go", "zig"],
+			"default": "github"
+		},
+		"repository": {
+			"description": "GitHub owner/repository. Required when source is github or omitted.",
+			"type": "string",
+			"pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*/[A-Za-z0-9][A-Za-z0-9._-]*$",
+			"examples": ["coalaura/builder"]
+		},
+		"prefix": {
+			"description": "Release tag prefix. Use an empty string for bare version tags.",
+			"type": "string",
+			"default": "v"
+		},
+		"binary": {
+			"description": "Executable name without the platform extension. Defaults to the filename stem; Go/Zig require their source name.",
+			"type": "string",
+			"pattern": "^[a-z0-9][a-z0-9._-]*$"
+		},
+		"args": {
+			"description": "Arguments used to query the installed version. Defaults to [--version], or [version] for Go/Zig. An empty array invokes the binary without arguments.",
+			"type": "array",
+			"items": {
+				"type": "string"
+			}
+		},
+		"asset": {
+			"description": "Default GitHub release asset template, overridden by platform entries.",
+			"allOf": [{"$ref": "#/definitions/asset"}],
+			"default": "{binary}-{os}-{arch}{ext}"
+		},
+		"platforms": {
+			"description": "Supported platforms and their overrides. Omit this map to support both Linux and Windows amd64.",
+			"type": "object",
+			"minProperties": 1,
+			"additionalProperties": false,
+			"properties": {
+				"linux-amd64": {"$ref": "#/definitions/target"},
+				"windows-amd64": {"$ref": "#/definitions/target"}
+			}
+		}
+	},
+	"allOf": [
+		{
+			"if": {
+				"required": ["source"],
+				"properties": {
+					"source": {"enum": ["go", "zig"]}
+				}
+			},
+			"then": {
+				"properties": {
+					"args": {"default": ["version"]},
+					"platforms": {
+						"type": "object",
+						"additionalProperties": {"$ref": "#/definitions/toolchainTarget"}
+					}
+				}
+			},
+			"else": {
+				"required": ["repository"],
+				"properties": {
+					"args": {"default": ["--version"]}
+				}
+			}
+		},
+		{
+			"if": {
+				"required": ["source"],
+				"properties": {
+					"source": {"const": "go"}
+				}
+			},
+			"then": {
+				"properties": {
+					"binary": {"const": "go"}
+				}
+			}
+		},
+		{
+			"if": {
+				"required": ["source"],
+				"properties": {
+					"source": {"const": "zig"}
+				}
+			},
+			"then": {
+				"properties": {
+					"binary": {"const": "zig"}
+				}
+			}
+		}
+	],
+	"definitions": {
+		"asset": {
+			"description": "Release asset filename. Supports {name}, {binary}, {version}, {tag}, {os}, {arch} and {ext}. Empty platform values inherit the package asset.",
+			"type": "string",
+			"pattern": "^(?:[^{}/\\\\]|\\{(?:name|binary|version|tag|os|arch|ext)\\})*$"
+		},
+		"template": {
+			"type": "string",
+			"pattern": "^(?:[^{}]|\\{(?:name|binary|version|tag|os|arch|ext)\\})*$"
+		},
+		"relativePath": {
+			"type": "string",
+			"pattern": "^(?!\\.{1,2}(?:/|$))[^/\\\\:\\u0000]+(?:/(?!\\.{1,2}(?:/|$))[^/\\\\:\\u0000]+)*$"
+		},
+		"target": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"asset": {"$ref": "#/definitions/asset"},
+				"executable": {
+					"description": "Relative archive member path using forward slashes. Omit or leave empty to find a unique matching binary filename. Supports the same placeholders as asset.",
+					"anyOf": [
+						{"const": ""},
+						{
+							"allOf": [
+								{"$ref": "#/definitions/template"},
+								{"$ref": "#/definitions/relativePath"}
+							]
+						}
+					]
+				},
+				"path": {
+					"description": "Destination executable path, starting with {bin}/ or {home}/. Supports {name}, {binary}, {os}, {arch}, {ext}, {bin} and {home}; version-dependent paths are not allowed. Empty values use the default.",
+					"default": "{bin}/{binary}{ext}",
+					"anyOf": [
+						{"const": ""},
+						{
+							"allOf": [
+								{"$ref": "#/definitions/relativePath"},
+								{
+									"type": "string",
+									"pattern": "^\\{(?:bin|home)\\}/(?:[^{}]|\\{(?:name|binary|os|arch|ext|bin|home)\\})*$"
+								}
+							]
+						}
+					]
+				}
+			}
+		},
+		"toolchainTarget": {
+			"description": "Go and Zig use official downloads and fixed install locations; platform overrides must be empty.",
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"asset": {"const": ""},
+				"executable": {"const": ""},
+				"path": {"const": ""}
+			}
+		}
+	}
+}

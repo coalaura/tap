@@ -1,2 +1,4 @@
+# yaml-language-server: $schema=./schema.json
+
 description: Reproducible builds for Go and native toolchains
 repository: coalaura/builder

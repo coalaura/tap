@@ -37,15 +37,21 @@ Use administrator privileges for Go's Windows MSI and appropriate permissions fo
 Add a file such as `packages/example.yml`:
 
 ```yaml
+# yaml-language-server: $schema=./schema.json
+
 description: An example command-line tool
 repository: owner/example
 ```
+
+[`packages/schema.json`](packages/schema.json) provides validation, completion and field descriptions in editors using YAML Language Server, including VS Code with the Red Hat YAML extension. Include the schema comment above in new package files. `go generate` remains the final validation step for filename-derived defaults and catalog-wide rules such as unique package names.
 
 The filename supplies the package name and binary name. Defaults are GitHub releases, a `v` tag prefix, `--version` arguments, both supported platforms, assets named `{binary}-{os}-{arch}{ext}` and the standard executable install location above.
 
 For platform-specific archives:
 
 ```yaml
+# yaml-language-server: $schema=./schema.json
+
 description: An example command-line tool
 repository: owner/example
 prefix: v
