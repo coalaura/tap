@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=./schema.json
+
+description: Go compiler overlay with opt-in compiler extensions
+source: pace
+repository: coalaura/pace
+prefix: pace
+companions: [compilepe, amspe]
+args: [version]
+checksums: SHA256SUMS
+platforms:
+  linux-amd64:
+    asset: pace-{version}-linux-amd64.tar.gz
+  windows-amd64:
+    asset: pace-{version}-windows-amd64.zip

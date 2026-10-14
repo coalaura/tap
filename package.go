@@ -50,7 +50,7 @@ func (pkg *Package) Get() error {
 		return err
 	}
 
-	err = ValidateBinary(pkg.Path, pkg.Definition.Args, remote)
+	err = pkg.ValidateBinary(pkg.Path, remote)
 	if err != nil {
 		return err
 	}
@@ -235,6 +235,8 @@ func ResolvePackage(definition *catalog.Package) (*Package, error) {
 	switch definition.Source {
 	case "go":
 		pkg.Path = GetGoBinaryPath()
+	case "pace":
+		pkg.Path = filepath.Join(filepath.Dir(GetGoBinaryPath()), pkg.Expand("{binary}{ext}", ""))
 	case "zig":
 		pkg.Path = GetZigBinaryPath()
 	default:

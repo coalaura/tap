@@ -130,7 +130,7 @@ func loadPackage(path string) (catalog.Package, error) {
 	if definition.Args == nil {
 		argument := "--version"
 
-		if definition.Source == "go" || definition.Source == "zig" {
+		if definition.Source == "go" || definition.Source == "pace" || definition.Source == "zig" {
 			argument = "version"
 		}
 

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"path"
+	"slices"
 	"strings"
 
 	"github.com/coalaura/tap/internal/catalog"
@@ -19,21 +20,32 @@ func validatePackage(definition *catalog.Package) error {
 	}
 
 	switch definition.Source {
-	case "github", "msi":
+	case "github", "msi", "pace":
 		owner, repository, ok := strings.Cut(definition.Repository, "/")
 		if !ok || !validRepositoryPart(owner) || !validRepositoryPart(repository) {
 			return errors.New("repository must be owner/name")
+		}
+
+		if definition.Source == "pace" && definition.Binary != "pace" {
+			return errors.New("pace requires the matching binary name")
 		}
 	case "go", "zig":
 		if definition.Binary != definition.Source {
 			return errors.New("go and zig sources require the matching binary name")
 		}
 	default:
-		return fmt.Errorf("unknown source %q (expected github, msi, go or zig)", definition.Source)
+		return fmt.Errorf("unknown source %q (expected github, msi, go, pace or zig)", definition.Source)
 	}
 
-	if len(definition.Companions) != 0 && definition.Source != "github" {
-		return errors.New("companions require the github source")
+	if len(definition.Companions) != 0 && definition.Source != "github" && definition.Source != "pace" {
+		return errors.New("companions require the github or pace source")
+	}
+
+	if definition.Source == "pace" {
+		hasCompilers := slices.Contains(definition.Companions, "compilepe") && slices.Contains(definition.Companions, "amspe")
+		if len(definition.Companions) != 2 || !hasCompilers {
+			return errors.New("pace requires compilepe and amspe as companions")
+		}
 	}
 
 	commands := make(map[string]struct{}, len(definition.Companions)+1)
@@ -52,8 +64,8 @@ func validatePackage(definition *catalog.Package) error {
 	}
 
 	if definition.Checksums != "" {
-		if definition.Source != "github" && definition.Source != "msi" {
-			return errors.New("checksums require the github or msi source")
+		if definition.Source != "github" && definition.Source != "msi" && definition.Source != "pace" {
+			return errors.New("checksums require the github, msi or pace source")
 		}
 
 		err := validateTemplate(definition.Checksums, false)
@@ -95,6 +107,10 @@ func validatePackage(definition *catalog.Package) error {
 }
 
 func validateTarget(definition *catalog.Package, target *catalog.Target) error {
+	if definition.Source == "pace" && target.Path != "" {
+		return errors.New("pace uses the Go bin directory as its fixed install location")
+	}
+
 	if definition.Source == "go" || definition.Source == "zig" {
 		if target.Asset != "" || target.Executable != "" || target.Path != "" {
 			return errors.New("go and zig use their official downloads and fixed install locations")
@@ -113,7 +129,7 @@ func validateTarget(definition *catalog.Package, target *catalog.Target) error {
 		}
 	}
 
-	if target.Path == "" {
+	if target.Path == "" && definition.Source != "pace" {
 		target.Path = "{bin}/{binary}{ext}"
 	}
 
@@ -138,6 +154,10 @@ func validateTarget(definition *catalog.Package, target *catalog.Target) error {
 	err = validateTemplate(target.Path, true)
 	if err != nil {
 		return fmt.Errorf("path: %w", err)
+	}
+
+	if definition.Source == "pace" {
+		return nil
 	}
 
 	programFilesPath := definition.Source == "msi" && strings.HasPrefix(target.Path, "{programfiles}/")

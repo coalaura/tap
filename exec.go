@@ -36,7 +36,29 @@ func (pkg *Package) ResolveCurrentVersion() (semver.SemVer, error) {
 		}
 	}
 
-	return ResolveBinaryVersion(pkg.Path, pkg.Definition.Args)
+	return pkg.ResolveBinaryVersion(pkg.Path)
+}
+
+func (pkg *Package) ResolveBinaryVersion(path string) (semver.SemVer, error) {
+	if pkg.Definition.Source == "pace" {
+		// PACE cannot run its version command without an exactly matching Go installation.
+		return ResolveGoBuildVersion(path)
+	}
+
+	return ResolveBinaryVersion(path, pkg.Definition.Args)
+}
+
+func (pkg *Package) ValidateBinary(path string, expected semver.SemVer) error {
+	version, err := pkg.ResolveBinaryVersion(path)
+	if err != nil {
+		return err
+	}
+
+	if !version.Equal(expected) {
+		return fmt.Errorf("expected version %s, got %s", expected, version)
+	}
+
+	return nil
 }
 
 func ResolveBinaryVersion(path string, args []string) (semver.SemVer, error) {

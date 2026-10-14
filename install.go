@@ -16,6 +16,11 @@ func (pkg *Package) Install(version semver.SemVer) error {
 		return InstallGo(version)
 	case "zig":
 		return InstallZig(version)
+	case "pace":
+		err := ValidatePaceGoVersion(version)
+		if err != nil {
+			return err
+		}
 	}
 
 	asset := pkg.Expand(pkg.Target.Asset, version.String())
@@ -61,7 +66,7 @@ func (pkg *Package) Install(version semver.SemVer) error {
 	}
 
 	// Companions share the verified archive; only the primary binary is the version probe.
-	err = ValidateBinary(source, pkg.Definition.Args, version)
+	err = pkg.ValidateBinary(source, version)
 	if err != nil {
 		return err
 	}

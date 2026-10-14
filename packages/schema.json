@@ -17,13 +17,13 @@
 			"pattern": "\\S"
 		},
 		"source": {
-			"description": "GitHub releases, a GitHub-hosted Windows MSI, or the dedicated Go/Zig installer using official downloads.",
+			"description": "GitHub releases, a GitHub-hosted Windows MSI, the PACE overlay in Go's bin directory, or the dedicated Go/Zig installer using official downloads.",
 			"type": "string",
-			"enum": ["github", "msi", "go", "zig"],
+			"enum": ["github", "msi", "go", "pace", "zig"],
 			"default": "github"
 		},
 		"repository": {
-			"description": "GitHub owner/repository. Required when source is github, msi or omitted.",
+			"description": "GitHub owner/repository. Required when source is github, msi, pace or omitted.",
 			"type": "string",
 			"pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*/[A-Za-z0-9][A-Za-z0-9._-]*$",
 			"examples": ["coalaura/builder"]
@@ -34,19 +34,19 @@
 			"default": "v"
 		},
 		"binary": {
-			"description": "Executable name without the platform extension. Defaults to the filename stem; Go/Zig require their source name.",
+			"description": "Executable name without the platform extension. Defaults to the filename stem; Go/PACE/Zig require their source name.",
 			"type": "string",
 			"pattern": "^[a-z0-9][a-z0-9._-]*$"
 		},
 		"args": {
-			"description": "Arguments used to query the installed version. Defaults to [--version], or [version] for Go/Zig. An empty array invokes the binary without arguments.",
+			"description": "Arguments used to query the installed version. Defaults to [--version], or [version] for Go/PACE/Zig. PACE's version is read from Go build metadata instead. An empty array invokes other binaries without arguments.",
 			"type": "array",
 			"items": {
 				"type": "string"
 			}
 		},
 		"companions": {
-			"description": "Additional executable names found in the same verified GitHub archive, installed beside the primary binary and removed with it.",
+			"description": "Additional executable names found in the same verified GitHub or PACE archive, installed beside the primary binary and removed with it. PACE requires compilepe and amspe.",
 			"type": "array",
 			"uniqueItems": true,
 			"items": {
@@ -123,6 +123,33 @@
 				"properties": {
 					"binary": {"const": "zig"}
 				}
+			}
+		},
+		{
+			"if": {
+				"required": ["source"],
+				"properties": {
+					"source": {"const": "pace"}
+				}
+			},
+			"then": {
+				"properties": {
+					"binary": {"const": "pace"},
+					"companions": {
+						"minItems": 2,
+						"maxItems": 2,
+						"items": {"enum": ["compilepe", "amspe"]}
+					},
+					"args": {"default": ["version"]},
+					"platforms": {
+						"additionalProperties": {
+							"properties": {
+								"path": {"const": "", "default": ""}
+							}
+						}
+					}
+				},
+				"required": ["companions"]
 			}
 		},
 		{
@@ -209,7 +236,7 @@
 					]
 				},
 				"path": {
-					"description": "Destination executable path, starting with {bin}/ or {home}/, or {programfiles}/ for MSI installers. Supports {name}, {binary}, {os}, {arch}, {ext}, {bin}, {home} and {programfiles}; version-dependent paths are not allowed. Empty values use the default, except MSI paths must be explicit.",
+					"description": "Destination executable path, starting with {bin}/ or {home}/, or {programfiles}/ for MSI installers. Supports {name}, {binary}, {os}, {arch}, {ext}, {bin}, {home} and {programfiles}; version-dependent paths are not allowed. Empty values use the default, except MSI paths must be explicit and PACE uses Go's bin directory with no override.",
 					"default": "{bin}/{binary}{ext}",
 					"anyOf": [
 						{"const": ""},
