@@ -46,7 +46,7 @@
 			}
 		},
 		"companions": {
-			"description": "Additional executable names found in the same verified GitHub or PACE archive, installed beside the primary binary and removed with it. PACE requires compilepe and amspe.",
+			"description": "Additional executable names found in the same verified GitHub or PACE archive, installed beside the primary binary and removed with it. PACE requires compilepe and asmpe.",
 			"type": "array",
 			"uniqueItems": true,
 			"items": {
@@ -138,7 +138,7 @@
 					"companions": {
 						"minItems": 2,
 						"maxItems": 2,
-						"items": {"enum": ["compilepe", "amspe"]}
+						"items": {"enum": ["compilepe", "asmpe"]}
 					},
 					"args": {"default": ["version"]},
 					"platforms": {

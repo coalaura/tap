@@ -41,7 +41,7 @@ Tap warns before running commands if `%USERPROFILE%\.bin` on Windows or `/usr/lo
 
 `findutils` installs `find`, `locate`, `updatedb` and `xargs` together. `diffutils` installs its multi-call binary, used as `diffutils diff ...` or `diffutils cmp ...`. `age` installs both `age` and `age-keygen`. Companion executables are installed beside the primary binary and removed with the package; a missing companion triggers reinstallation on the next `get`.
 
-`pace` installs `pace`, `compilepe` and `amspe` beside Tap's Go binary, with `.exe` suffixes on Windows. PACE requires the exact matching Go release to be installed at Tap's Go location before installation; use `tap get go pace` to update both in order. Removing PACE removes only those three executables. Replacing Go's directory on Linux also removes the overlay, so run `tap get pace` afterwards. PACE's version is read from embedded Go build metadata because its version command requires a matching Go installation, allowing Tap to list and update an overlay after Go changes.
+`pace` installs `pace`, `compilepe` and `asmpe` from the archive's `bin` directory beside Tap's Go binary, with `.exe` suffixes on Windows. PACE requires the exact matching Go release to be installed at Tap's Go location before installation; use `tap get go pace` to update both in order. Removing PACE removes only those three executables. Replacing Go's directory on Linux also removes the overlay, so run `tap get pace` afterwards. PACE's version is read from embedded Go build metadata because its version command requires a matching Go installation, allowing Tap to list and update an overlay after Go changes.
 
 ## Define packages
 
@@ -86,7 +86,7 @@ Supported fields:
 | `repository` | GitHub `owner/repository`; required for the GitHub, MSI and PACE sources. |
 | `prefix` | Release tag prefix; defaults to `v`. Use `prefix: ''` for bare version tags. |
 | `binary` | Executable name without `.exe`; defaults to the filename stem. |
-| `companions` | Additional executable names in a verified GitHub or PACE archive, installed beside the primary binary; defaults to none, except PACE requires `compilepe` and `amspe`. |
+| `companions` | Additional executable names in a verified GitHub or PACE archive, installed beside the primary binary; defaults to none, except PACE requires `compilepe` and `asmpe`. |
 | `args` | Version arguments; defaults to `[--version]` or `[version]` for Go, PACE and Zig. PACE uses embedded Go build metadata instead of invoking these arguments. |
 | `asset` | Default GitHub asset template, overridden by platform entries. |
 | `checksums` | Release asset containing GNU-style SHA-256 sums, used when the download asset has no GitHub digest. |

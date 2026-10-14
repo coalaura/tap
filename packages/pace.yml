@@ -4,11 +4,13 @@ description: Go compiler overlay with opt-in compiler extensions
 source: pace
 repository: coalaura/pace
 prefix: pace
-companions: [compilepe, amspe]
+companions: [compilepe, asmpe]
 args: [version]
 checksums: SHA256SUMS
 platforms:
   linux-amd64:
     asset: pace-{version}-linux-amd64.tar.gz
+    executable: bin/pace
   windows-amd64:
     asset: pace-{version}-windows-amd64.zip
+    executable: bin/pace.exe

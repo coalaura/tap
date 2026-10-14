@@ -42,9 +42,9 @@ func validatePackage(definition *catalog.Package) error {
 	}
 
 	if definition.Source == "pace" {
-		hasCompilers := slices.Contains(definition.Companions, "compilepe") && slices.Contains(definition.Companions, "amspe")
+		hasCompilers := slices.Contains(definition.Companions, "compilepe") && slices.Contains(definition.Companions, "asmpe")
 		if len(definition.Companions) != 2 || !hasCompilers {
-			return errors.New("pace requires compilepe and amspe as companions")
+			return errors.New("pace requires compilepe and asmpe as companions")
 		}
 	}
 
