@@ -1,0 +1,4 @@
+# yaml-language-server: $schema=./schema.json
+
+description: A single-binary CLI for packing and unpacking archives
+repository: coalaura/pakr
