@@ -87,22 +87,12 @@ func UpdateTap() error {
 
 	defer os.Remove(source)
 
-	err = os.Chmod(source, 0755)
-	if err != nil {
-		return err
-	}
-
-	err = ValidateBinary(source, []string{"--version"}, remote)
-	if err != nil {
-		return err
-	}
-
 	info, err := os.Stat(executable)
 	if err != nil {
 		return err
 	}
 
-	// Stage beside the executable so replacement stays on the same filesystem.
+	// Stage beside the executable for same-filesystem replacement and validation outside noexec temp directories.
 	directory, err := os.MkdirTemp(filepath.Dir(executable), ".tap-update-*")
 	if err != nil {
 		return err
@@ -113,6 +103,11 @@ func UpdateTap() error {
 	staged := filepath.Join(directory, filepath.Base(executable))
 
 	err = CopyFileMode(source, staged, info.Mode().Perm())
+	if err != nil {
+		return err
+	}
+
+	err = ValidateBinary(staged, []string{"--version"}, remote)
 	if err != nil {
 		return err
 	}
