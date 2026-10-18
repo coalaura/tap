@@ -2,6 +2,26 @@
 
 A small package manager for Windows and Linux (amd64), using a catalog compiled from `packages/*.yml`.
 
+## Install
+
+### Linux
+
+```sh
+curl -fsSL https://src.ws2.sh/tap/install.sh | sh
+```
+
+Installs to `/usr/local/bin/tap`, using `sudo` when not running as root. Requires Linux amd64, `curl` and standard coreutils (including `sha256sum`). If `/usr/local/bin` is missing from `PATH`, the installer prints the command to add it to your shell.
+
+### Windows
+
+```powershell
+irm https://src.ws2.sh/tap/install.ps1 | iex
+```
+
+Installs to `%USERPROFILE%\.bin\tap.exe` and adds `%USERPROFILE%\.bin` to your user and current PowerShell session `PATH`. Requires Windows amd64 and PowerShell 5.1 or newer; administrator privileges are not needed.
+
+Both scripts download the latest stable [GitHub release](https://github.com/coalaura/tap/releases/latest) and verify the binary against its release's `SHA256SUMS` before installation. Run `tap --help` to get started and `tap tap` to update later (with `sudo tap tap` for the default Linux installation).
+
 ## Commands
 
 ```sh
