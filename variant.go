@@ -87,6 +87,16 @@ func (pkg *Package) RemoveVariantRecord() error {
 		return nil
 	}
 
+	path, err := ConfigPath()
+	if err != nil {
+		return err
+	}
+
+	err = checkDestinationPermissions(path)
+	if err != nil {
+		return err
+	}
+
 	delete(config.Packages, pkg.Definition.Name)
 
 	return WriteConfig(config)

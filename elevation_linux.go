@@ -11,7 +11,7 @@ import (
 )
 
 func retryElevated(ctx context.Context, arguments []string, cause error) error {
-	_, denied := errors.AsType[*writePermissionError](cause)
+	permission, denied := errors.AsType[*writePermissionError](cause)
 	if !denied || os.Geteuid() == 0 {
 		return cause
 	}
@@ -31,7 +31,11 @@ func retryElevated(ctx context.Context, arguments []string, cause error) error {
 		return errors.Join(cause, err)
 	}
 
-	log.Warnf("%s; retrying with sudo for root permissions\n", cause)
+	if permission.preflight {
+		log.Warnf("%s; using sudo for root permissions\n", cause)
+	} else {
+		log.Warnf("%s; retrying with sudo for root permissions\n", cause)
+	}
 
 	args := make([]string, 0, len(arguments)+3)
 	args = append(args, "--user=root", "--", executable)
@@ -48,7 +52,7 @@ func retryElevated(ctx context.Context, arguments []string, cause error) error {
 			return ctx.Err()
 		}
 
-		return describeCommandError("sudo retry", command, err, nil)
+		return describeCommandError("sudo", command, err, nil)
 	}
 
 	return nil

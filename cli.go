@@ -142,12 +142,23 @@ func getPackages(ctx context.Context, command *cli.Command) error {
 	return applyPackages(ctx, command, func(pkg *Package) error {
 		err := pkg.Get(force, dry)
 
-		if dry {
+		if err == nil || dry {
 			return err
 		}
 
-		// Finish a partially completed install even if its primary binary was already replaced.
-		return retryElevated(ctx, []string{"get", "--force", pkg.Name()}, err)
+		permission, denied := errors.AsType[*writePermissionError](err)
+
+		arguments := make([]string, 0, 3)
+		arguments = append(arguments, "get")
+
+		// Only failed writes need --force to finish a potentially partial install.
+		if force || denied && !permission.preflight {
+			arguments = append(arguments, "--force")
+		}
+
+		arguments = append(arguments, pkg.Name())
+
+		return retryElevated(ctx, arguments, err)
 	})
 }
 

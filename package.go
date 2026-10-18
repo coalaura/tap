@@ -60,6 +60,11 @@ func (pkg *Package) Get(force, dry bool) error {
 		return nil
 	}
 
+	err = pkg.checkPermissions(false)
+	if err != nil {
+		return err
+	}
+
 	log.Stepf("installing %s %s\n", pkg.Name(), remote)
 
 	installStarted := time.Now()
@@ -141,6 +146,11 @@ func (pkg *Package) Remove() error {
 		log.Infof("%s: not installed\n", pkg.Definition.Name)
 
 		return nil
+	}
+
+	err = pkg.checkPermissions(true)
+	if err != nil {
+		return err
 	}
 
 	log.Stepf("removing %s\n", pkg.Definition.Name)

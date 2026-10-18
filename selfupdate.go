@@ -76,6 +76,11 @@ func UpdateTap() error {
 		return err
 	}
 
+	err = checkDestinationPermissions(executable)
+	if err != nil {
+		return err
+	}
+
 	log.Stepf("updating tap %s\n", remote)
 
 	installStarted := time.Now()

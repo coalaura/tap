@@ -6,7 +6,8 @@ import (
 )
 
 type writePermissionError struct {
-	cause error
+	cause     error
+	preflight bool
 }
 
 func (err *writePermissionError) Error() string {
