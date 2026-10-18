@@ -1,0 +1,4 @@
+# yaml-language-server: $schema=./schema.json
+
+description: Cross-platform hex dump and reverse conversion tool
+repository: coalaura/xxd

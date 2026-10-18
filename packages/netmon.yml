@@ -1,0 +1,5 @@
+# yaml-language-server: $schema=./schema.json
+
+description: Network diagnosis dashboard for Windows and Linux
+repository: coalaura/netmon
+args: [version]
