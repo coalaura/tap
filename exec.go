@@ -68,15 +68,19 @@ func ResolveBinaryVersion(path string, args []string) (semver.SemVer, error) {
 	cmd := exec.CommandContext(ctx, path, args...)
 
 	out, err := cmd.CombinedOutput()
+	out = bytes.TrimSpace(ansi.StripANSI(out))
+
 	if err != nil {
 		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-			return semver.Invalid, fmt.Errorf("version command timed out after %s", VersionCommandTimeout)
+			return semver.Invalid, fmt.Errorf("version command %q timed out after %s", cmd.String(), VersionCommandTimeout)
 		}
 
-		return semver.Invalid, err
-	}
+		if len(out) == 0 {
+			return semver.Invalid, fmt.Errorf("version command %q failed: %w", cmd.String(), err)
+		}
 
-	out = ansi.StripANSI(out)
+		return semver.Invalid, fmt.Errorf("version command %q failed: %w: %s", cmd.String(), err, out)
+	}
 
 	if isDevVersionOutput(out) {
 		return semver.NewEmptySemVer(), nil

@@ -20,14 +20,20 @@ type Package struct {
 	Variant    string
 }
 
-func (pkg *Package) Get() error {
+func (pkg *Package) Get(force bool) error {
 	log.Infof("checking %s\n", pkg.Name())
 
 	checkStarted := time.Now()
 
-	local, err := pkg.ResolveCurrentVersion()
-	if err != nil {
-		return err
+	local := semver.NewEmptySemVer()
+
+	if !force {
+		var err error
+
+		local, err = pkg.ResolveCurrentVersion()
+		if err != nil {
+			return err
+		}
 	}
 
 	remote, err := pkg.FetchLatestVersion()
@@ -35,15 +41,17 @@ func (pkg *Package) Get() error {
 		return err
 	}
 
-	variant, err := pkg.InstalledVariant()
-	if err != nil {
-		return err
-	}
+	if !force {
+		variant, err := pkg.InstalledVariant()
+		if err != nil {
+			return err
+		}
 
-	if !local.Equal(semver.NewEmptySemVer()) && !remote.HigherThan(local) && variant == pkg.Variant {
-		log.Subf("up to date: %s (checked in %s)\n", local, time.Since(checkStarted).Round(time.Millisecond))
+		if !local.Equal(semver.NewEmptySemVer()) && !remote.HigherThan(local) && variant == pkg.Variant {
+			log.Subf("up to date: %s (checked in %s)\n", local, time.Since(checkStarted).Round(time.Millisecond))
 
-		return nil
+			return nil
+		}
 	}
 
 	log.Subf("latest %s (checked in %s)\n", remote, time.Since(checkStarted).Round(time.Millisecond))

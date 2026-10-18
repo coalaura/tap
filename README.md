@@ -30,6 +30,7 @@ tap get go zig bun      # install or update named packages
 tap get onino           # install or update the default CPU variant
 tap get onino:gpu       # install or switch to the GPU variant
 tap get onino:cpu       # explicitly select the CPU variant
+tap get --force onino   # reinstall without checking the installed version
 tap rm bun              # remove named packages
 tap ls                  # list installed catalog packages and versions
 tap find                # show the complete catalog
@@ -40,6 +41,8 @@ tap --help
 ```
 
 `get`, `rm` and `info` accept multiple case-insensitive package names, optionally suffixed with `:variant`. Unknown names and conflicting variants are rejected before changes. Running `tap` without arguments shows help. `get` uses the latest stable upstream release and leaves an equal or newer installation of the selected variant alone.
+
+Use `tap get --force <package[:variant]>...` to reinstall the latest stable release without checking the installed version or variant, including when an older binary does not support its version flag. This can replace a newer installed version. Download verification and validation of the new binaries still apply.
 
 Variants share an install path, so selecting another replaces the installed variant. Tap records installed variants in `~/.config/tap.yml` on both Windows and Linux.
 

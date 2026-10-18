@@ -38,6 +38,12 @@ func NewCommand() *cli.Command {
 				Usage:     "install or update packages",
 				ArgsUsage: "<package[:variant]>...",
 				Action:    getPackages,
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:  "force",
+						Usage: "reinstall without checking the installed version",
+					},
+				},
 			},
 			{
 				Name:      "rm",
@@ -124,7 +130,11 @@ func updateTap(ctx context.Context, command *cli.Command) error {
 }
 
 func getPackages(ctx context.Context, command *cli.Command) error {
-	return applyPackages(ctx, command, (*Package).Get)
+	force := command.Bool("force")
+
+	return applyPackages(ctx, command, func(pkg *Package) error {
+		return pkg.Get(force)
+	})
 }
 
 func removePackages(ctx context.Context, command *cli.Command) error {
