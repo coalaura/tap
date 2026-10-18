@@ -103,6 +103,91 @@ func validatePackage(definition *catalog.Package) error {
 		definition.Platforms[platform] = target
 	}
 
+	return validateVariants(definition)
+}
+
+func validateVariants(definition *catalog.Package) error {
+	if len(definition.Variants) == 0 {
+		if definition.Variants != nil {
+			return errors.New("variants must contain at least one variant")
+		}
+
+		if definition.DefaultVariant != "" {
+			return errors.New("default_variant requires variants")
+		}
+
+		if strings.Contains(definition.Asset, "{variant}") || strings.Contains(definition.Checksums, "{variant}") {
+			return errors.New("{variant} requires variants")
+		}
+
+		for _, target := range definition.Platforms {
+			if strings.Contains(target.Asset, "{variant}") || strings.Contains(target.Executable, "{variant}") {
+				return errors.New("{variant} requires variants")
+			}
+		}
+
+		return nil
+	}
+
+	if definition.Source != "github" {
+		return errors.New("variants require the github source")
+	}
+
+	if _, exists := definition.Variants[definition.DefaultVariant]; !exists {
+		return errors.New("default_variant must name a defined variant")
+	}
+
+	for name, variant := range definition.Variants {
+		if !validName(name) {
+			return fmt.Errorf("invalid variant name %q", name)
+		}
+
+		if variant.Asset != "" {
+			err := validateTemplate(variant.Asset, false)
+			if err != nil || strings.ContainsAny(variant.Asset, "/\\") {
+				return fmt.Errorf("variant %s: invalid asset template", name)
+			}
+		}
+
+		for platform, target := range variant.Platforms {
+			if _, supported := definition.Platforms[platform]; !supported {
+				return fmt.Errorf("variant %s: unsupported platform %q", name, platform)
+			}
+
+			if target.Path != "" {
+				return fmt.Errorf("variant %s: install paths must be shared with the package", name)
+			}
+		}
+
+		targets := make(map[string]catalog.Target, len(definition.Platforms))
+
+		for platform, base := range definition.Platforms {
+			if variant.Asset != "" {
+				base.Asset = variant.Asset
+			}
+
+			override := variant.Platforms[platform]
+			if override.Asset != "" {
+				base.Asset = override.Asset
+			}
+
+			if override.Executable != "" {
+				base.Executable = override.Executable
+			}
+
+			err := validateTarget(definition, &base)
+			if err != nil {
+				return fmt.Errorf("variant %s %s: %w", name, platform, err)
+			}
+
+			targets[platform] = base
+		}
+
+		variant.Platforms = targets
+
+		definition.Variants[name] = variant
+	}
+
 	return nil
 }
 
@@ -190,9 +275,9 @@ func validateTemplate(value string, installPath bool) error {
 
 		switch variable {
 		case "name", "binary", "os", "arch", "ext":
-		case "version", "tag":
+		case "version", "tag", "variant":
 			if installPath {
-				return errors.New("install paths cannot depend on a version")
+				return errors.New("install paths cannot depend on a version or variant")
 			}
 		case "bin", "home", "programfiles":
 			if !installPath {

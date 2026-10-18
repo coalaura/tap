@@ -1,0 +1,9 @@
+# yaml-language-server: $schema=./schema.json
+
+description: Search for vanity Tor v3 onion addresses
+repository: coalaura/onino
+asset: '{binary}-{os}-{arch}-{variant}{ext}'
+default_variant: cpu
+variants:
+  cpu: {}
+  gpu: {}

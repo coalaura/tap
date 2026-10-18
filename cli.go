@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"runtime"
+	"slices"
 	"strings"
 	"text/tabwriter"
 
@@ -34,13 +36,13 @@ func NewCommand() *cli.Command {
 			{
 				Name:      "get",
 				Usage:     "install or update packages",
-				ArgsUsage: "<package>...",
+				ArgsUsage: "<package[:variant]>...",
 				Action:    getPackages,
 			},
 			{
 				Name:      "rm",
 				Usage:     "remove packages",
-				ArgsUsage: "<package>...",
+				ArgsUsage: "<package[:variant]>...",
 				Action:    removePackages,
 			},
 			{
@@ -57,7 +59,7 @@ func NewCommand() *cli.Command {
 			{
 				Name:      "info",
 				Usage:     "show package details",
-				ArgsUsage: "<package>...",
+				ArgsUsage: "<package[:variant]>...",
 				Action:    packageInfo,
 			},
 			{
@@ -148,7 +150,7 @@ func applyPackages(ctx context.Context, command *cli.Command, action func(*Packa
 
 		err = action(pkg)
 		if err != nil {
-			failures = append(failures, fmt.Errorf("%s: %w", pkg.Definition.Name, err))
+			failures = append(failures, fmt.Errorf("%s: %w", pkg.Name(), err))
 		}
 	}
 
@@ -183,16 +185,33 @@ func listPackages(ctx context.Context, command *cli.Command) error {
 			continue
 		}
 
+		name := pkg.Definition.Name
+
+		if len(pkg.Definition.Variants) != 0 {
+			variant, err := pkg.InstalledVariant()
+			if err != nil {
+				failures = append(failures, fmt.Errorf("%s: %w", name, err))
+
+				continue
+			}
+
+			if variant == "" {
+				variant = "unknown"
+			}
+
+			name += ":" + variant
+		}
+
 		version, err := pkg.ResolveCurrentVersion()
 		if err != nil {
-			fmt.Fprintf(writer, "%s\tunknown\t%s\n", pkg.Definition.Name, pkg.Path)
+			fmt.Fprintf(writer, "%s\tunknown\t%s\n", name, pkg.Path)
 
 			failures = append(failures, fmt.Errorf("%s: %w", pkg.Definition.Name, err))
 
 			continue
 		}
 
-		fmt.Fprintf(writer, "%s\t%s\t%s\n", pkg.Definition.Name, version, pkg.Path)
+		fmt.Fprintf(writer, "%s\t%s\t%s\n", name, version, pkg.Path)
 	}
 
 	return errors.Join(errors.Join(failures...), writer.Flush())
@@ -207,13 +226,20 @@ func findPackages(ctx context.Context, command *cli.Command) error {
 
 	for index := range packageCatalog {
 		definition := &packageCatalog[index]
-		if !strings.Contains(definition.Name, query) && !strings.Contains(strings.ToLower(definition.Description), query) {
-			continue
-		}
-
 		_, supported := definition.Platforms[runtime.GOOS+"-"+runtime.GOARCH]
 
-		fmt.Fprintf(writer, "%s\t%s\t%t\n", definition.Name, strings.ToLower(definition.Description), supported)
+		if strings.Contains(definition.Name, query) || strings.Contains(strings.ToLower(definition.Description), query) {
+			fmt.Fprintf(writer, "%s\t%s\t%t\n", definition.Name, strings.ToLower(definition.Description), supported)
+		}
+
+		for _, variant := range slices.Sorted(maps.Keys(definition.Variants)) {
+			name := definition.Name + ":" + variant
+			if !strings.Contains(name, query) && !strings.Contains(strings.ToLower(definition.Description), query) {
+				continue
+			}
+
+			fmt.Fprintf(writer, "%s\t%s\t%t\n", name, strings.ToLower(definition.Description), supported)
+		}
 	}
 
 	return writer.Flush()
@@ -238,7 +264,11 @@ func packageInfo(ctx context.Context, command *cli.Command) error {
 
 		definition := pkg.Definition
 
-		fmt.Fprintf(writer, "%s - %s\nsource: %s\n", definition.Name, strings.ToLower(definition.Description), definition.Source)
+		fmt.Fprintf(writer, "%s - %s\nsource: %s\n", pkg.Name(), strings.ToLower(definition.Description), definition.Source)
+
+		if len(definition.Variants) != 0 {
+			fmt.Fprintf(writer, "variants: %s (default: %s)\n", strings.Join(slices.Sorted(maps.Keys(definition.Variants)), ", "), definition.DefaultVariant)
+		}
 
 		if definition.Repository != "" {
 			fmt.Fprintf(writer, "repo: https://github.com/%s\n", definition.Repository)
@@ -255,6 +285,19 @@ func packageInfo(ctx context.Context, command *cli.Command) error {
 			fmt.Fprintln(writer, "installed: no")
 
 			continue
+		}
+
+		if len(definition.Variants) != 0 {
+			variant, err := pkg.InstalledVariant()
+			if err != nil {
+				return fmt.Errorf("%s: %w", definition.Name, err)
+			}
+
+			if variant == "" {
+				variant = "unknown"
+			}
+
+			fmt.Fprintf(writer, "installed variant: %s\n", variant)
 		}
 
 		version, err := pkg.ResolveCurrentVersion()

@@ -7,6 +7,9 @@ A small package manager for Windows and Linux (amd64), using a catalog compiled 
 ```sh
 tap tap                 # update tap itself to the latest stable release
 tap get go zig bun      # install or update named packages
+tap get onino           # install or update the default CPU variant
+tap get onino:gpu       # install or switch to the GPU variant
+tap get onino:cpu       # explicitly select the CPU variant
 tap rm bun              # remove named packages
 tap ls                  # list installed catalog packages and versions
 tap find                # show the complete catalog
@@ -16,7 +19,9 @@ tap --version           # tap version dev or the version supplied at build time
 tap --help
 ```
 
-`get`, `rm` and `info` accept multiple package names. Names are case-insensitive and unknown names are rejected before any packages are changed. Running `tap` without arguments shows help. `get` uses the latest stable upstream release and leaves an equal or newer installation alone.
+`get`, `rm` and `info` accept multiple case-insensitive package names, optionally suffixed with `:variant`. Unknown names and conflicting variants are rejected before changes. Running `tap` without arguments shows help. `get` uses the latest stable upstream release and leaves an equal or newer installation of the selected variant alone.
+
+Variants share an install path, so selecting another replaces the installed variant. Tap records installed variants in `~/.config/tap.yml` on both Windows and Linux.
 
 `tap tap` checks the latest stable `coalaura/tap` release and replaces the running executable in place, following symlinks. Equal or newer versions are left alone; a `dev` build installs the latest stable release. The download's SHA-256 digest and reported version are verified before replacement. The version check runs from a staging directory beside the installed executable, so temporary directories can be mounted with `noexec`. Write access to the executable's directory is required. On Windows, the running executable is renamed to a `.tap-old` backup, restored if replacement fails and cleaned up by the next `tap tap` invocation if it remains locked.
 
@@ -90,12 +95,16 @@ Supported fields:
 | `args` | Version arguments; defaults to `[--version]` or `[version]` for Go, PACE and Zig. PACE uses embedded Go build metadata instead of invoking these arguments. |
 | `asset` | Default GitHub asset template, overridden by platform entries. |
 | `checksums` | Release asset containing GNU-style SHA-256 sums, used when the download asset has no GitHub digest. |
+| `default_variant` | Variant selected by the unqualified package name; required when `variants` is defined. |
+| `variants` | Map of variant names for the `github` source. Variants inherit the package settings and share its binary names, version arguments and install paths. |
+| `variants.<variant>.asset` | Override the asset template for this variant on all platforms. |
+| `variants.<variant>.platforms` | Platform-specific `asset` and `executable` overrides; only platforms supported by the package are allowed. Empty values inherit the package settings. |
 | `platforms` | Map of `linux-amd64` and/or `windows-amd64` entries. Omit it to support both. |
 | `platforms.<platform>.asset` | Platform-specific GitHub asset template. |
 | `platforms.<platform>.executable` | Relative executable path within an archive. Omit it to find a unique matching binary filename. |
 | `platforms.<platform>.path` | Destination file; defaults to `{bin}/{binary}{ext}`. Must start with `{bin}/` or `{home}/`, or `{programfiles}/` for MSI installers. MSI requires an explicit path matching the installer's destination. PACE uses Go's bin directory and does not allow an override. |
 
-Asset, checksum and archive-executable templates support `{name}`, `{binary}`, `{version}`, `{tag}`, `{os}`, `{arch}` and `{ext}`. `{version}` excludes the tag prefix; `{tag}` includes it. `{ext}` is `.exe` on Windows and empty on Linux. Destination templates additionally support `{bin}` and `{home}`, plus `{programfiles}` for MSI installers, but cannot contain version-dependent placeholders. Use forward slashes in YAML paths. For example, Bun uses `path: '{home}/.bun/bin/{binary}{ext}'`.
+Asset, checksum and archive-executable templates support `{name}`, `{binary}`, `{version}`, `{tag}`, `{os}`, `{arch}`, `{ext}` and `{variant}`. `{variant}` requires defined variants and expands to the selected variant name. `{version}` excludes the tag prefix; `{tag}` includes it. `{ext}` is `.exe` on Windows and empty on Linux. Destination templates additionally support `{bin}` and `{home}`, plus `{programfiles}` for MSI installers, but cannot contain version- or variant-dependent placeholders. Use forward slashes in YAML paths. For example, Bun uses `path: '{home}/.bun/bin/{binary}{ext}'`.
 
 GitHub and PACE packages support raw executables and `.zip`, `.tar.gz` or `.tar.xz` archives containing the primary executable and any configured companions. Additional runtime files are not installed by these sources. Archives are extracted within bounded temporary directories, SHA-256 digests are verified, companions must be present and the primary binary must report the expected version (or contain matching Go build metadata for PACE) before replacing existing executables. GitHub release assets must provide a SHA-256 `digest` or a configured checksum file; Go and Zig use their official checksum metadata. Set `GITHUB_TOKEN` when authenticated GitHub API access is needed.
 
@@ -108,7 +117,7 @@ go generate ./...
 go build -ldflags="-X main.Version=v1.2.3" .
 ```
 
-`go generate` runs `internal/generate`, parses YAML with `github.com/goccy/go-yaml`, validates definitions and writes the deterministic `packages_gen.go` catalog. Commit the YAML and regenerated Go file together. A normal build uses that generated catalog; Tap needs neither YAML parsing nor external package files at runtime. Regenerate and rebuild after editing a definition.
+`go generate` runs `internal/generate`, parses YAML with `github.com/goccy/go-yaml`, validates definitions and writes the deterministic `packages_gen.go` catalog. Commit the YAML and regenerated Go file together. A normal build uses that generated catalog without external package definitions. Regenerate and rebuild after editing a definition.
 
 The CLI uses `github.com/urfave/cli/v3` and operational logging uses `github.com/coalaura/plain/minimal`.
 

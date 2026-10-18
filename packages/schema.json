@@ -63,6 +63,18 @@
 			"description": "GitHub release asset containing GNU-style SHA-256 sums. Used only when a download asset has no GitHub digest. Supports the same placeholders as asset.",
 			"allOf": [{"$ref": "#/definitions/asset"}]
 		},
+		"default_variant": {
+			"description": "Variant selected when the package name has no colon suffix. Must name an entry in variants.",
+			"type": "string",
+			"pattern": "^[a-z0-9][a-z0-9._-]*$"
+		},
+		"variants": {
+			"description": "Named GitHub package variants sharing the same binaries and install paths. Overrides inherit the package's platform settings.",
+			"type": "object",
+			"minProperties": 1,
+			"propertyNames": {"pattern": "^[a-z0-9][a-z0-9._-]*$"},
+			"additionalProperties": {"$ref": "#/definitions/variant"}
+		},
 		"platforms": {
 			"description": "Supported platforms and their overrides. Omit this map to support both Linux and Windows amd64.",
 			"type": "object",
@@ -74,7 +86,15 @@
 			}
 		}
 	},
+	"dependencies": {
+		"variants": ["default_variant"],
+		"default_variant": ["variants"]
+	},
 	"allOf": [
+		{
+			"if": {"required": ["variants"]},
+			"then": {"properties": {"source": {"const": "github"}}}
+		},
 		{
 			"if": {
 				"required": ["source"],
@@ -206,13 +226,13 @@
 	],
 	"definitions": {
 		"asset": {
-			"description": "Release asset filename. Supports {name}, {binary}, {version}, {tag}, {os}, {arch} and {ext}. Empty platform values inherit the package asset.",
+			"description": "Release asset filename. Supports {name}, {binary}, {version}, {tag}, {os}, {arch}, {ext} and {variant}. Empty platform values inherit the package asset.",
 			"type": "string",
-			"pattern": "^(?:[^{}/\\\\]|\\{(?:name|binary|version|tag|os|arch|ext)\\})*$"
+			"pattern": "^(?:[^{}/\\\\]|\\{(?:name|binary|version|tag|os|arch|ext|variant)\\})*$"
 		},
 		"template": {
 			"type": "string",
-			"pattern": "^(?:[^{}]|\\{(?:name|binary|version|tag|os|arch|ext)\\})*$"
+			"pattern": "^(?:[^{}]|\\{(?:name|binary|version|tag|os|arch|ext|variant)\\})*$"
 		},
 		"relativePath": {
 			"type": "string",
@@ -251,6 +271,29 @@
 						}
 					]
 				}
+			}
+		},
+		"variant": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"asset": {"$ref": "#/definitions/asset"},
+				"platforms": {
+					"type": "object",
+					"additionalProperties": false,
+					"properties": {
+						"linux-amd64": {"$ref": "#/definitions/variantTarget"},
+						"windows-amd64": {"$ref": "#/definitions/variantTarget"}
+					}
+				}
+			}
+		},
+		"variantTarget": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"asset": {"$ref": "#/definitions/asset"},
+				"executable": {"$ref": "#/definitions/target/properties/executable"}
 			}
 		},
 		"toolchainTarget": {

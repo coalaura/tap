@@ -17,10 +17,11 @@ type Package struct {
 	Definition *catalog.Package
 	Target     catalog.Target
 	Path       string
+	Variant    string
 }
 
 func (pkg *Package) Get() error {
-	log.Infof("checking %s\n", pkg.Definition.Name)
+	log.Infof("checking %s\n", pkg.Name())
 
 	checkStarted := time.Now()
 
@@ -34,14 +35,19 @@ func (pkg *Package) Get() error {
 		return err
 	}
 
-	if !local.Equal(semver.NewEmptySemVer()) && !remote.HigherThan(local) {
+	variant, err := pkg.InstalledVariant()
+	if err != nil {
+		return err
+	}
+
+	if !local.Equal(semver.NewEmptySemVer()) && !remote.HigherThan(local) && variant == pkg.Variant {
 		log.Subf("up to date: %s (checked in %s)\n", local, time.Since(checkStarted).Round(time.Millisecond))
 
 		return nil
 	}
 
 	log.Subf("latest %s (checked in %s)\n", remote, time.Since(checkStarted).Round(time.Millisecond))
-	log.Stepf("installing %s %s\n", pkg.Definition.Name, remote)
+	log.Stepf("installing %s %s\n", pkg.Name(), remote)
 
 	installStarted := time.Now()
 
@@ -55,7 +61,12 @@ func (pkg *Package) Get() error {
 		return err
 	}
 
-	log.Successf("installed %s %s in %s\n", pkg.Definition.Name, remote, time.Since(installStarted).Round(time.Millisecond))
+	err = pkg.RecordVariant()
+	if err != nil {
+		return err
+	}
+
+	log.Successf("installed %s %s in %s\n", pkg.Name(), remote, time.Since(installStarted).Round(time.Millisecond))
 
 	return nil
 }
@@ -92,6 +103,11 @@ func (pkg *Package) Remove() error {
 	}
 
 	if !installed {
+		err = pkg.RemoveVariantRecord()
+		if err != nil {
+			return err
+		}
+
 		log.Infof("%s: not installed\n", pkg.Definition.Name)
 
 		return nil
@@ -123,6 +139,11 @@ func (pkg *Package) Remove() error {
 		return err
 	}
 
+	err = pkg.RemoveVariantRecord()
+	if err != nil {
+		return err
+	}
+
 	log.Successf("removed %s in %s\n", pkg.Definition.Name, time.Since(removeStarted).Round(time.Millisecond))
 
 	return nil
@@ -135,7 +156,7 @@ func (pkg *Package) Expand(value, version string) string {
 		extension = ".exe"
 	}
 
-	replacer := strings.NewReplacer("{name}", pkg.Definition.Name, "{binary}", pkg.Definition.Binary, "{version}", version, "{tag}", pkg.Definition.Prefix+version, "{os}", runtime.GOOS, "{arch}", runtime.GOARCH, "{ext}", extension)
+	replacer := strings.NewReplacer("{name}", pkg.Definition.Name, "{binary}", pkg.Definition.Binary, "{version}", version, "{tag}", pkg.Definition.Prefix+version, "{os}", runtime.GOOS, "{arch}", runtime.GOARCH, "{ext}", extension, "{variant}", pkg.Variant)
 
 	return replacer.Replace(value)
 }
@@ -154,6 +175,14 @@ func (pkg *Package) BinaryPath(index int) string {
 	return filepath.Join(filepath.Dir(pkg.Path), name)
 }
 
+func (pkg *Package) Name() string {
+	if pkg.Variant == "" {
+		return pkg.Definition.Name
+	}
+
+	return pkg.Definition.Name + ":" + pkg.Variant
+}
+
 func SelectPackages(names []string) ([]*Package, error) {
 	if runtime.GOOS != "windows" && runtime.GOOS != "linux" {
 		return nil, fmt.Errorf("unsupported operating system: %s", runtime.GOOS)
@@ -164,7 +193,7 @@ func SelectPackages(names []string) ([]*Package, error) {
 	}
 
 	packages := make([]*Package, 0, len(packageCatalog))
-	selected := make(map[string]struct{}, len(names))
+	selected := make(map[string]string, len(names))
 
 	if len(names) == 0 {
 		for index := range packageCatalog {
@@ -173,7 +202,7 @@ func SelectPackages(names []string) ([]*Package, error) {
 				continue
 			}
 
-			pkg, err := ResolvePackage(definition)
+			pkg, err := ResolvePackage(definition, "")
 			if err != nil {
 				return nil, err
 			}
@@ -186,14 +215,16 @@ func SelectPackages(names []string) ([]*Package, error) {
 
 	for _, name := range names {
 		name = strings.ToLower(strings.TrimSpace(name))
-		if _, exists := selected[name]; exists {
-			continue
+
+		base, variant, explicit := strings.Cut(name, ":")
+		if base == "" || explicit && (variant == "" || strings.Contains(variant, ":")) {
+			return nil, fmt.Errorf("invalid package selector %q; expected package or package:variant", name)
 		}
 
 		var definition *catalog.Package
 
 		for index := range packageCatalog {
-			if packageCatalog[index].Name == name {
+			if packageCatalog[index].Name == base {
 				definition = &packageCatalog[index]
 
 				break
@@ -204,22 +235,46 @@ func SelectPackages(names []string) ([]*Package, error) {
 			return nil, fmt.Errorf("unknown package %q; use tap find to browse the catalog", name)
 		}
 
-		pkg, err := ResolvePackage(definition)
+		pkg, err := ResolvePackage(definition, variant)
 		if err != nil {
 			return nil, err
 		}
 
-		selected[name] = struct{}{}
+		if previous, exists := selected[base]; exists {
+			if previous != pkg.Variant {
+				return nil, fmt.Errorf("conflicting variants for %s: %s and %s", base, previous, pkg.Variant)
+			}
+
+			continue
+		}
+
+		selected[base] = pkg.Variant
 		packages = append(packages, pkg)
 	}
 
 	return packages, nil
 }
 
-func ResolvePackage(definition *catalog.Package) (*Package, error) {
+func ResolvePackage(definition *catalog.Package, variant string) (*Package, error) {
 	target, supported := definition.Platforms[runtime.GOOS+"-"+runtime.GOARCH]
 	if !supported {
 		return nil, fmt.Errorf("%s does not support %s/%s", definition.Name, runtime.GOOS, runtime.GOARCH)
+	}
+
+	if variant == "" {
+		variant = definition.DefaultVariant
+	}
+
+	if variant != "" {
+		selected, exists := definition.Variants[variant]
+		if !exists {
+			return nil, fmt.Errorf("unknown variant %q for %s; use tap info %s to see available variants", variant, definition.Name, definition.Name)
+		}
+
+		target, supported = selected.Platforms[runtime.GOOS+"-"+runtime.GOARCH]
+		if !supported {
+			return nil, fmt.Errorf("%s:%s does not support %s/%s", definition.Name, variant, runtime.GOOS, runtime.GOARCH)
+		}
 	}
 
 	home, err := UserHomeDir()
@@ -230,6 +285,7 @@ func ResolvePackage(definition *catalog.Package) (*Package, error) {
 	pkg := &Package{
 		Definition: definition,
 		Target:     target,
+		Variant:    variant,
 	}
 
 	switch definition.Source {
