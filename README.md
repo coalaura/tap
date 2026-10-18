@@ -1,6 +1,6 @@
 # tap
 
-A small package manager for Windows and Linux (amd64), using a catalog compiled from `packages/*.yml`.
+A small package manager for Windows and Linux (amd64). Installs and updates tools from a [built-in catalog](packages/), using their upstream releases.
 
 ## Install
 
@@ -10,7 +10,9 @@ A small package manager for Windows and Linux (amd64), using a catalog compiled 
 curl -fsSL https://src.ws2.sh/tap/install.sh | sh
 ```
 
-Installs to `/usr/local/bin/tap`, using `sudo` when not running as root. Requires Linux amd64, `curl` and standard coreutils (including `sha256sum`). If `/usr/local/bin` is missing from `PATH`, the installer prints the command to add it to your shell.
+- Installs to `/usr/local/bin/tap`, using `sudo` when not running as root.
+- Requires `curl` and standard coreutils, including `sha256sum`.
+- Prints PATH setup instructions if `/usr/local/bin` is missing from your PATH.
 
 ### Windows
 
@@ -18,42 +20,40 @@ Installs to `/usr/local/bin/tap`, using `sudo` when not running as root. Require
 irm https://src.ws2.sh/tap/install.ps1 | iex
 ```
 
-Installs to `%USERPROFILE%\.bin\tap.exe` and adds `%USERPROFILE%\.bin` to your user and current PowerShell session `PATH`. Requires Windows amd64 and PowerShell 5.1 or newer; administrator privileges are not needed.
+- Installs to `%USERPROFILE%\.bin\tap.exe` and adds that directory to your user and current PowerShell session PATH.
+- Requires PowerShell 5.1 or newer. No administrator privileges needed to install Tap.
 
-Both scripts download the latest stable [GitHub release](https://github.com/coalaura/tap/releases/latest) and verify the binary against its release's `SHA256SUMS` before installation. Run `tap --help` to get started and `tap tap` to update later.
+Both scripts download the latest stable [GitHub release](https://github.com/coalaura/tap/releases/latest) and verify it against the release's `SHA256SUMS`.
 
-## Commands
+## Usage
 
 ```sh
-tap tap                 # update tap itself to the latest stable release
-tap get go zig bun      # install or update named packages
-tap get onino           # install or update the default CPU variant
-tap get onino:gpu       # install or switch to the GPU variant
-tap get onino:cpu       # explicitly select the CPU variant
-tap get --force onino   # reinstall without checking the installed version
-tap get --dry go bun     # show available updates without installing
-tap rm bun              # remove named packages
-tap ls                  # list installed catalog packages and versions
-tap find                # show the complete catalog
+tap find                # browse the catalog
 tap find compiler       # search names and descriptions
-tap info go bun         # show package details, installed and latest remote versions
-tap --version           # tap version dev or the version supplied at build time
-tap --help
+tap get go zig bun      # install or update packages
+tap get --dry go bun    # check for updates without installing
+tap info go bun         # show details, installed versions and latest versions
+tap ls                  # list installed catalog packages
+tap rm bun              # remove a package
+tap tap                 # update tap itself
 ```
 
-`get`, `rm` and `info` accept multiple case-insensitive package names, optionally suffixed with `:variant`. Unknown names and conflicting variants are rejected before changes. Running `tap` without arguments shows help. `get` uses the latest stable upstream release and leaves an equal or newer installation of the selected variant alone.
+`get`, `rm` and `info` accept multiple package names. Names are case-insensitive. Run `tap --help` for help or `tap --version` for Tap's version.
 
-Use `tap get --force <package[:variant]>...` to reinstall the latest stable release without checking the installed version or variant, including when an older binary does not support its version flag. This can replace a newer installed version. Download verification and validation of the new binaries still apply.
+`get` installs the latest stable release and leaves an equal or newer installation of the selected variant alone. `ls` and `find` work offline; `get`, `info` and `tap tap` check remote releases.
 
-Use `tap get --dry <package[:variant]>...` to check versions without downloading or installing packages. It shows the latest version that would be installed, or reports that the selected variant is up to date. Combine it with `--force` to preview a forced reinstall.
+### Reinstalling and switching variants
 
-Variants share an install path, so selecting another replaces the installed variant. Tap records installed variants in `~/.config/tap.yml` on both Windows and Linux.
+```sh
+tap get --force bun       # reinstall the latest stable release
+tap get --dry --force bun # preview a forced reinstall
+tap get onino             # use the default CPU variant
+tap get onino:gpu         # install or switch to the GPU variant
+```
 
-`tap tap` checks the latest stable `coalaura/tap` release and replaces the running executable in place, following symlinks. Equal or newer versions are left alone; a `dev` build installs the latest stable release. The download's SHA-256 digest and reported version are verified before replacement. The version check runs from a staging directory beside the installed executable, so temporary directories can be mounted with `noexec`. Write access to the executable's directory is required. On Windows, the running executable is renamed to a `.tap-old` backup, restored if replacement fails and cleaned up by the next `tap tap` invocation if it remains locked.
-
-Installed status is discovered from each package's configured path, including installations made by the original upgrader. `ls` shows only catalog packages installed at those paths; `find` searches the entire catalog. `ls` and `find` work offline. `info` shows the installed version when available and fetches the latest stable remote version, including for packages that are not installed. Installed versions are read by invoking each binary with its configured version arguments, except PACE, which uses embedded Go build metadata. Tap does not inspect arbitrary programs elsewhere on `PATH`.
-
-Command failures distinguish launch errors from exit codes and include captured output. On Linux, Tap checks existing executables for missing ELF loaders or shebang interpreters and reports signal termination separately. On Windows, common loader and crash status codes receive descriptive messages. Other exit codes remain numeric because their meanings depend on the program.
+- `--force` skips the installed-version check and can replace a newer version with the latest stable release.
+- Variants share an install path; switching variants replaces the installed one.
+- Installed variants are recorded in `~/.config/tap.yml` on both platforms.
 
 ## Install locations
 
@@ -62,23 +62,26 @@ Command failures distinguish launch errors from exit codes and include captured 
 | Go | `%ProgramFiles%\Go` (official MSI) | `/usr/local/go` |
 | PACE | `%ProgramFiles%\Go\bin` | `/usr/local/go/bin` |
 | Zig | `%USERPROFILE%\.zig` | `/usr/local/zig` |
-| Bun | `%USERPROFILE%\.bun\bin\bun.exe` | `~/.bun/bin/bun` |
-| Rio | `%ProgramFiles%\Rio\rio.exe` (official MSI) | Not supported |
-| Other executables | `%USERPROFILE%\.bin\<binary>.exe` | `/usr/local/bin/<binary>` |
+| Bun | `%USERPROFILE%\.bun\bin` | `~/.bun/bin` |
+| Rio | `%ProgramFiles%\Rio` (official MSI) | Not supported |
+| Other executables | `%USERPROFILE%\.bin` | `/usr/local/bin` |
 
-On Linux, `tap tap`, `get` and `rm` check destination directory permissions before downloading or modifying an installation. If access is denied, Tap runs the affected operation through `sudo`, which may prompt for your password. Checks use your effective permissions, including group access and ACLs, and cover missing parent directories, companion binaries and variant records. Writable destinations, up-to-date packages and dry runs do not require elevation. Permission checks are best-effort: if an actual write still fails with a filesystem permission error, Tap retries through `sudo`; a retried install uses `--force` to complete any partial changes. If `sudo` is unavailable, Tap asks you to rerun as root. An already-root process does not retry. Under `sudo`, user-local paths refer to the invoking user's home and retain that user's ownership. Windows does not automatically elevate; use administrator privileges for Windows MSI installers. Put the relevant binary directories on `PATH` to run the installed tools.
+Tap finds installed packages at these configured locations, rather than searching PATH. Add the relevant binary directories to PATH to run the tools.
 
-Tap warns before running commands if `%USERPROFILE%\.bin` on Windows or `/usr/local/bin` on Linux is missing from `PATH`.
+- **Linux:** Tap checks write permissions and uses `sudo` when needed, with a retry if a later write fails. Dry runs and up-to-date packages do not prompt for elevation.
+- **Windows:** MSI packages require administrator privileges. Tap does not automatically elevate.
+- **Downloads:** SHA-256 checksums and installed versions are verified. Set `GITHUB_TOKEN` if you need authenticated GitHub API access.
 
-`rm` removes a package's executables or the complete toolchain directory for Go and Zig. Bun's cache, configuration and other user data remain in place. On Windows, removing Go or Rio downloads the matching official MSI and uninstalls it through Windows Installer; this requires network access and an MSI-installed distribution.
+### Package notes
 
-`findutils` installs `find`, `locate`, `updatedb` and `xargs` together. `diffutils` installs its multi-call binary, used as `diffutils diff ...` or `diffutils cmp ...`. `age` installs both `age` and `age-keygen`. Companion executables are installed beside the primary binary and removed with the package; a missing companion triggers reinstallation on the next `get`.
+- **PACE:** Requires the exact matching Go release. Use `tap get go pace` to update both in order. Replacing Go's directory on Linux removes PACE, so reinstall PACE afterwards if updating Go separately.
+- **Companions:** `findutils` includes `find`, `locate`, `updatedb` and `xargs`; `age` includes `age-keygen`; PACE includes `compilepe` and `asmpe`. Companions are installed and removed together.
+- **diffutils:** Uses a multi-call binary: `diffutils diff ...` or `diffutils cmp ...`.
+- **Removal:** `rm` removes executables, or the complete toolchain directory for Go and Zig. Bun's cache, configuration and other user data remain. Removing Go or Rio on Windows downloads the matching official MSI and requires an MSI-installed distribution.
 
-`pace` installs `pace`, `compilepe` and `asmpe` from the archive's `bin` directory beside Tap's Go binary, with `.exe` suffixes on Windows. PACE requires the exact matching Go release to be installed at Tap's Go location before installation; use `tap get go pace` to update both in order. Removing PACE removes only those three executables. Replacing Go's directory on Linux also removes the overlay, so run `tap get pace` afterwards. PACE's version is read from embedded Go build metadata because its version command requires a matching Go installation, allowing Tap to list and update an overlay after Go changes.
+## Add a package
 
-## Define packages
-
-Add a file such as `packages/example.yml`:
+Create a file such as `packages/example.yml`:
 
 ```yaml
 # yaml-language-server: $schema=./schema.json
@@ -87,19 +90,11 @@ description: An example command-line tool
 repository: owner/example
 ```
 
-[`packages/schema.json`](packages/schema.json) provides validation, completion and field descriptions in editors using YAML Language Server, including VS Code with the Red Hat YAML extension. Include the schema comment above in new package files. `go generate` remains the final validation step for filename-derived defaults and catalog-wide rules such as unique package names.
+The filename supplies the package and binary names. Defaults are GitHub releases, a `v` tag prefix, `--version` arguments, both platforms and assets named `{binary}-{os}-{arch}{ext}`.
 
-The filename supplies the package name and binary name. Defaults are GitHub releases, a `v` tag prefix, `--version` arguments, both supported platforms, assets named `{binary}-{os}-{arch}{ext}` and the standard executable install location above.
-
-For platform-specific archives:
+For platform-specific archives, add entries such as:
 
 ```yaml
-# yaml-language-server: $schema=./schema.json
-
-description: An example command-line tool
-repository: owner/example
-prefix: v
-args: [--version]
 platforms:
   linux-amd64:
     asset: example-{version}-linux.tar.gz
@@ -109,46 +104,18 @@ platforms:
     executable: example/bin/example.exe
 ```
 
-Supported fields:
+- See [`packages/schema.json`](packages/schema.json) for all fields and [`packages/`](packages/) for examples. The schema comment enables editor validation and completion.
+- GitHub packages support raw executables and `.zip`, `.tar.gz` or `.tar.xz` archives. Only the primary executable and configured companions are installed.
+- Release assets must provide a SHA-256 digest or a configured checksum file. Go and Zig use official checksum metadata.
+- After changes, run `go generate ./...` and commit both the YAML and regenerated `packages_gen.go`.
 
-| Field | Meaning |
-| --- | --- |
-| `name` | Override the filename-derived package name. |
-| `description` | Required description used by `find` and `info`. |
-| `source` | `github` (default), `msi`, `go`, `pace` or `zig`. MSI uses a GitHub-hosted Windows installer; PACE uses a GitHub archive and Go's bin directory; Go and Zig use official downloads and dedicated toolchain installers. |
-| `repository` | GitHub `owner/repository`; required for the GitHub, MSI and PACE sources. |
-| `prefix` | Release tag prefix; defaults to `v`. Use `prefix: ''` for bare version tags. |
-| `binary` | Executable name without `.exe`; defaults to the filename stem. |
-| `companions` | Additional executable names in a verified GitHub or PACE archive, installed beside the primary binary; defaults to none, except PACE requires `compilepe` and `asmpe`. |
-| `args` | Version arguments; defaults to `[--version]` or `[version]` for Go, PACE and Zig. PACE uses embedded Go build metadata instead of invoking these arguments. |
-| `asset` | Default GitHub asset template, overridden by platform entries. |
-| `checksums` | Release asset containing GNU-style SHA-256 sums, used when the download asset has no GitHub digest. |
-| `default_variant` | Variant selected by the unqualified package name; required when `variants` is defined. |
-| `variants` | Map of variant names for the `github` source. Variants inherit the package settings and share its binary names, version arguments and install paths. |
-| `variants.<variant>.asset` | Override the asset template for this variant on all platforms. |
-| `variants.<variant>.platforms` | Platform-specific `asset` and `executable` overrides; only platforms supported by the package are allowed. Empty values inherit the package settings. |
-| `platforms` | Map of `linux-amd64` and/or `windows-amd64` entries. Omit it to support both. |
-| `platforms.<platform>.asset` | Platform-specific GitHub asset template. |
-| `platforms.<platform>.executable` | Relative executable path within an archive. Omit it to find a unique matching binary filename. |
-| `platforms.<platform>.path` | Destination file; defaults to `{bin}/{binary}{ext}`. Must start with `{bin}/` or `{home}/`, or `{programfiles}/` for MSI installers. MSI requires an explicit path matching the installer's destination. PACE uses Go's bin directory and does not allow an override. |
+## Build
 
-Asset, checksum and archive-executable templates support `{name}`, `{binary}`, `{version}`, `{tag}`, `{os}`, `{arch}`, `{ext}` and `{variant}`. `{variant}` requires defined variants and expands to the selected variant name. `{version}` excludes the tag prefix; `{tag}` includes it. `{ext}` is `.exe` on Windows and empty on Linux. Destination templates additionally support `{bin}` and `{home}`, plus `{programfiles}` for MSI installers, but cannot contain version- or variant-dependent placeholders. Use forward slashes in YAML paths. For example, Bun uses `path: '{home}/.bun/bin/{binary}{ext}'`.
-
-GitHub and PACE packages support raw executables and `.zip`, `.tar.gz` or `.tar.xz` archives containing the primary executable and any configured companions. Additional runtime files are not installed by these sources. Archives are extracted within bounded temporary directories, SHA-256 digests are verified, companions must be present and the primary binary must report the expected version (or contain matching Go build metadata for PACE) before replacing existing executables. GitHub release assets must provide a SHA-256 `digest` or a configured checksum file; Go and Zig use their official checksum metadata. Set `GITHUB_TOKEN` when authenticated GitHub API access is needed.
-
-The `msi` source supports only `windows-amd64`, requires an `.msi` asset and uses Windows Installer for installation and removal. Tap verifies the download's SHA-256 digest before running the installer and checks the installed binary's version afterwards. Rio uses its official `rio-installer-x86_64.msi`, which manages its files, shortcuts and PATH registration.
-
-## Generate and build
+Use the Go version declared in [`go.mod`](go.mod):
 
 ```sh
 go generate ./...
 go build -ldflags="-X main.Version=v1.2.3" .
 ```
 
-`go generate` runs `internal/generate`, parses YAML with `github.com/goccy/go-yaml`, validates definitions and writes the deterministic `packages_gen.go` catalog. Commit the YAML and regenerated Go file together. A normal build uses that generated catalog without external package definitions. Regenerate and rebuild after editing a definition.
-
-The CLI uses `github.com/urfave/cli/v3` and operational logging uses `github.com/coalaura/plain/minimal`.
-
-## Releases
-
-Push a `v*` tag, such as `v1.2.3`, to run `.github/workflows/release.yml`. It regenerates the package catalog, builds CPU-compatible Linux and Windows amd64 binaries and injects the tag into `main.Version`. Configure the `COALAURA_PFX` and `COALAURA_PFX_PASSWORD` repository secrets for signing. The workflow publishes signed `tap-linux-amd64` and `tap-windows-amd64.exe` binaries, `SHA256SUMS`, build provenance and generated release notes. Tags containing a hyphen, such as `v1.2.3-rc.1`, produce prereleases.
+Generation validates the package definitions and writes the catalog used by the build. Package files are not needed at runtime. Rebuild after changing definitions; omit the linker flag to build with the version `dev`.
