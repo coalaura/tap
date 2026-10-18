@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="360" viewBox="0 0 1120 360" fill="none" role="img" aria-labelledby="title description">
+	<title id="title">tap</title>
+	<desc id="description">A maple tree tapped for packages: a small parcel falls from its spout beside the tap wordmark. Package manager for Windows and Linux.</desc>
+	<defs>
+		<path id="leaf" d="M0 0-10-27-43-23-35-40-56-63-29-60-31-81-12-68 0-104 12-68 31-81 29-60 56-63 35-40 43-23 10-27Z"/>
+	</defs>
+
+	<!-- A maple, its spile, and one freshly drawn package. -->
+	<g id="tree">
+		<path fill="#829879" d="M205 304C232 288 238 256 239 224V151C239 124 229 110 210 96L188 77 196 66 225 85C234 92 241 102 247 109V66L261 58 265 104C278 93 290 81 299 66L311 74C303 96 280 112 275 133C271 153 276 182 278 206C282 259 287 288 313 304L278 298 264 282 252 302 239 297Z"/>
+		<path stroke="#DDE5CD" stroke-width="3" stroke-linecap="round" d="M250 121C259 149 255 175 258 194M251 215C253 242 250 267 242 280M269 247C269 263 274 281 281 288"/>
+		<ellipse cx="247" cy="170" rx="4" ry="12" stroke="#DDE5CD" stroke-width="2" transform="rotate(-4 247 170)"/>
+		<g fill="#466C4C">
+			<use href="#leaf" transform="translate(205 104) rotate(-42) scale(0.72)"/>
+			<use href="#leaf" transform="translate(255 76) rotate(5) scale(0.5)"/>
+			<use href="#leaf" transform="translate(294 106) rotate(48) scale(0.79)"/>
+		</g>
+		<g stroke="#9AB58A" stroke-width="2" stroke-linecap="round">
+			<path d="m198 96-35-38m21 23-24-3m24 3-3-22M255 68l4-37m-3 24-11-10m11 10 12-8M301 100l40-38m-26 25 2-21m-2 21 24-1"/>
+		</g>
+	</g>
+	<g id="spile">
+		<ellipse cx="275" cy="192" rx="10" ry="16" fill="#253D31" transform="rotate(-12 275 192)"/>
+		<path fill="#496354" d="m274 184 69-17c17-4 35 8 35 26v8h-17v-7c0-8-6-12-14-10l-68 17Z"/>
+		<path stroke="#B0C2AC" stroke-width="3" stroke-linecap="round" d="m283 190 62-15c12-3 25 7 25 18"/>
+		<path stroke="#253D31" stroke-width="3" stroke-linecap="round" d="M361 201h17"/>
+	</g>
+	<g id="package" stroke-linejoin="round">
+		<path fill="#DCA152" d="m370 224 26 15-26 15-26-15Z"/>
+		<path fill="#BF7B32" d="m344 239 26 15v29l-26-15Z"/>
+		<path fill="#925224" d="m370 254 26-15v29l-26 15Z"/>
+		<path fill="#F8D49A" d="m354 233 8-5 26 15-8 5Z"/>
+		<path fill="#E9B66D" d="m380 248 8-5v29l-8 5Z"/>
+		<path stroke="#F0C083" stroke-width="1.5" d="m344 239 26 15v29"/>
+	</g>
+
+	<!-- Outlined lettering keeps the wordmark independent of installed fonts. -->
+	<g id="wordmark" fill="#253D31" fill-rule="evenodd">
+		<path d="M488 69h34v40h46v30h-46v47q0 17 18 17h28v30h-34q-46 0-46-43v-51h-22v-30h22Z"/>
+		<path d="M652 105c-43 0-70 27-70 66s26 65 63 65c20 0 33-8 43-20v17h33V108h-33v16c-10-13-23-19-36-19Zm0 31c22 0 37 14 37 35s-15 35-37 35-36-15-36-35 14-35 36-35Z"/>
+		<path d="M747 108h33v16c11-13 27-19 45-19 38 0 66 27 66 66s-28 65-66 65c-18 0-33-6-44-19v61h-34Zm70 28c23 0 40 14 40 35s-17 35-40 35-37-14-37-35 14-35 37-35Z"/>
+	</g>
+	<text x="466" y="324" fill="#53654F" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="25">Package manager for Windows and Linux</text>
+</svg>

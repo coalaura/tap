@@ -1,4 +1,8 @@
-# tap
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/banner.svg">
+  <source media="(prefers-color-scheme: light)" srcset=".github/banner-light.svg">
+  <img alt="tap - a maple tree tapped for packages, with a parcel falling from its spout" src=".github/banner-light.svg">
+</picture>
 
 A small package manager for Windows and Linux (amd64). Installs and updates tools from a [built-in catalog](packages/), using their upstream releases.
 
