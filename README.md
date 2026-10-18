@@ -50,6 +50,8 @@ Variants share an install path, so selecting another replaces the installed vari
 
 Installed status is discovered from each package's configured path, including installations made by the original upgrader. `ls` shows only catalog packages installed at those paths; `find` searches the entire catalog. `ls`, `find` and `info` work offline. Installed versions are read by invoking each binary with its configured version arguments, except PACE, which uses embedded Go build metadata. Tap does not inspect arbitrary programs elsewhere on `PATH`.
 
+Command failures distinguish launch errors from exit codes and include captured output. On Linux, Tap checks existing executables for missing ELF loaders or shebang interpreters and reports signal termination separately. On Windows, common loader and crash status codes receive descriptive messages. Other exit codes remain numeric because their meanings depend on the program.
+
 ## Install locations
 
 | Package | Windows | Linux |
