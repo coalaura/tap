@@ -73,17 +73,17 @@ func WriteConfig(config Config) error {
 
 	err = os.MkdirAll(directory, 0755)
 	if err != nil {
-		return err
+		return writeError(err)
 	}
 
 	err = ChownToInvokingUser(directory)
 	if err != nil {
-		return err
+		return writeError(err)
 	}
 
 	file, err := os.CreateTemp(directory, ".tap-*")
 	if err != nil {
-		return err
+		return writeError(err)
 	}
 
 	defer os.Remove(file.Name())
@@ -108,5 +108,5 @@ func WriteConfig(config Config) error {
 		return err
 	}
 
-	return ReplaceFile(file.Name(), path)
+	return writeError(ReplaceFile(file.Name(), path))
 }

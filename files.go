@@ -45,14 +45,14 @@ func CopyFileMode(src, dst string, mode os.FileMode) error {
 	if err != nil {
 		in.Close()
 
-		return err
+		return writeError(err)
 	}
 
 	out, err := os.CreateTemp(dir, ".upgrader-*")
 	if err != nil {
 		in.Close()
 
-		return err
+		return writeError(err)
 	}
 
 	tmp := out.Name()
@@ -95,7 +95,7 @@ func CopyFileMode(src, dst string, mode os.FileMode) error {
 		return err
 	}
 
-	return ReplaceFile(tmp, dst)
+	return writeError(ReplaceFile(tmp, dst))
 }
 
 func ReplaceDirectory(src, dst string) error {
@@ -103,17 +103,17 @@ func ReplaceDirectory(src, dst string) error {
 
 	err := os.MkdirAll(parent, 0755)
 	if err != nil {
-		return err
+		return writeError(err)
 	}
 
 	backup, err := os.MkdirTemp(parent, ".upgrader-backup-*")
 	if err != nil {
-		return err
+		return writeError(err)
 	}
 
 	err = os.Remove(backup)
 	if err != nil {
-		return err
+		return writeError(err)
 	}
 
 	var hasBackup bool
@@ -122,7 +122,7 @@ func ReplaceDirectory(src, dst string) error {
 	if err == nil {
 		err = os.Rename(dst, backup)
 		if err != nil {
-			return err
+			return writeError(err)
 		}
 
 		hasBackup = true
@@ -139,11 +139,11 @@ func ReplaceDirectory(src, dst string) error {
 			}
 		}
 
-		return err
+		return writeError(err)
 	}
 
 	if hasBackup {
-		return os.RemoveAll(backup)
+		return writeError(os.RemoveAll(backup))
 	}
 
 	return nil

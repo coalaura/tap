@@ -126,19 +126,28 @@ func updateTap(ctx context.Context, command *cli.Command) error {
 		return errors.New("usage: tap tap")
 	}
 
-	return UpdateTap()
+	err := UpdateTap()
+
+	return retryElevated(ctx, []string{"tap"}, err)
 }
 
 func getPackages(ctx context.Context, command *cli.Command) error {
 	force := command.Bool("force")
 
 	return applyPackages(ctx, command, func(pkg *Package) error {
-		return pkg.Get(force)
+		err := pkg.Get(force)
+
+		// Finish a partially completed install even if its primary binary was already replaced.
+		return retryElevated(ctx, []string{"get", "--force", pkg.Name()}, err)
 	})
 }
 
 func removePackages(ctx context.Context, command *cli.Command) error {
-	return applyPackages(ctx, command, (*Package).Remove)
+	return applyPackages(ctx, command, func(pkg *Package) error {
+		err := pkg.Remove()
+
+		return retryElevated(ctx, []string{"rm", pkg.Name()}, err)
+	})
 }
 
 func applyPackages(ctx context.Context, command *cli.Command, action func(*Package) error) error {

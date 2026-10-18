@@ -20,7 +20,7 @@ irm https://src.ws2.sh/tap/install.ps1 | iex
 
 Installs to `%USERPROFILE%\.bin\tap.exe` and adds `%USERPROFILE%\.bin` to your user and current PowerShell session `PATH`. Requires Windows amd64 and PowerShell 5.1 or newer; administrator privileges are not needed.
 
-Both scripts download the latest stable [GitHub release](https://github.com/coalaura/tap/releases/latest) and verify the binary against its release's `SHA256SUMS` before installation. Run `tap --help` to get started and `tap tap` to update later (with `sudo tap tap` for the default Linux installation).
+Both scripts download the latest stable [GitHub release](https://github.com/coalaura/tap/releases/latest) and verify the binary against its release's `SHA256SUMS` before installation. Run `tap --help` to get started and `tap tap` to update later.
 
 ## Commands
 
@@ -63,7 +63,7 @@ Command failures distinguish launch errors from exit codes and include captured 
 | Rio | `%ProgramFiles%\Rio\rio.exe` (official MSI) | Not supported |
 | Other executables | `%USERPROFILE%\.bin\<binary>.exe` | `/usr/local/bin/<binary>` |
 
-Use administrator privileges for Windows MSI installers and appropriate permissions for Linux's `/usr/local` locations. Under `sudo`, user-local paths refer to the invoking user's home and retain that user's ownership. Put the relevant binary directories on `PATH` to run the installed tools.
+On Linux, `tap tap`, `get` and `rm` first run with your current permissions. If changing the installation fails with a filesystem permission error, Tap warns and retries that operation through `sudo`, which may prompt for your password. Only the affected package is retried; a retried install uses `--force` to complete any partial changes. Writable destinations and up-to-date packages do not require elevation. If `sudo` is unavailable, Tap asks you to rerun as root. An already-root process does not retry. Under `sudo`, user-local paths refer to the invoking user's home and retain that user's ownership. Windows does not automatically elevate; use administrator privileges for Windows MSI installers. Put the relevant binary directories on `PATH` to run the installed tools.
 
 Tap warns before running commands if `%USERPROFILE%\.bin` on Windows or `/usr/local/bin` on Linux is missing from `PATH`.
 

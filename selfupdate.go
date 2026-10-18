@@ -95,7 +95,7 @@ func UpdateTap() error {
 	// Stage beside the executable for same-filesystem replacement and validation outside noexec temp directories.
 	directory, err := os.MkdirTemp(filepath.Dir(executable), ".tap-update-*")
 	if err != nil {
-		return err
+		return writeError(err)
 	}
 
 	defer os.RemoveAll(directory)
@@ -114,7 +114,7 @@ func UpdateTap() error {
 
 	err = ReplaceTapExecutable(staged, executable)
 	if err != nil {
-		return fmt.Errorf("replace tap executable: %w", err)
+		return fmt.Errorf("replace tap executable: %w", writeError(err))
 	}
 
 	log.Successf("updated tap %s in %s\n", remote, time.Since(installStarted).Round(time.Millisecond))

@@ -28,7 +28,7 @@ func InstallGo(ver semver.SemVer) error {
 
 	dir, err := os.MkdirTemp("/usr/local", ".tap-go-*")
 	if err != nil {
-		return err
+		return writeError(err)
 	}
 
 	defer os.RemoveAll(dir)
@@ -56,7 +56,7 @@ func InstallZig(ver semver.SemVer) error {
 
 	dir, err := os.MkdirTemp("/usr/local", ".tap-zig-*")
 	if err != nil {
-		return err
+		return writeError(err)
 	}
 
 	defer os.RemoveAll(dir)
@@ -77,5 +77,5 @@ func InstallZig(ver semver.SemVer) error {
 }
 
 func RemoveGo() error {
-	return os.RemoveAll("/usr/local/go")
+	return writeError(os.RemoveAll("/usr/local/go"))
 }

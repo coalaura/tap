@@ -126,7 +126,7 @@ func (pkg *Package) PrepareDirectory() error {
 
 	err := os.MkdirAll(directory, 0755)
 	if err != nil {
-		return err
+		return writeError(err)
 	}
 
 	if !strings.HasPrefix(pkg.Target.Path, "{home}/") {
@@ -150,7 +150,7 @@ func (pkg *Package) PrepareDirectory() error {
 	for directory != filepath.Clean(home) {
 		err = ChownToInvokingUser(directory)
 		if err != nil {
-			return err
+			return writeError(err)
 		}
 
 		directory = filepath.Dir(directory)

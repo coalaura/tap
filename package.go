@@ -107,7 +107,24 @@ func (pkg *Package) IsInstalled() (bool, error) {
 func (pkg *Package) Remove() error {
 	installed, err := pkg.IsInstalled()
 	if err != nil {
-		return err
+		return writeError(err)
+	}
+
+	// A failed recursive removal can leave a toolchain directory without its executable.
+	toolchain := pkg.Definition.Source == "go" || pkg.Definition.Source == "zig"
+	if !installed && runtime.GOOS == "linux" && toolchain {
+		directory := filepath.Dir(pkg.Path)
+
+		if pkg.Definition.Source == "go" {
+			directory = filepath.Dir(directory)
+		}
+
+		_, err = os.Stat(directory)
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			return writeError(err)
+		}
+
+		installed = err == nil
 	}
 
 	if !installed {
@@ -129,14 +146,14 @@ func (pkg *Package) Remove() error {
 	case "go":
 		err = RemoveGo()
 	case "zig":
-		err = os.RemoveAll(filepath.Dir(pkg.Path))
+		err = writeError(os.RemoveAll(filepath.Dir(pkg.Path)))
 	case "msi":
 		err = pkg.RemoveMSI()
 	default:
 		for index := range len(pkg.Definition.Companions) + 1 {
 			err = os.Remove(pkg.BinaryPath(index))
 			if err != nil && !errors.Is(err, os.ErrNotExist) {
-				return err
+				return writeError(err)
 			}
 		}
 
