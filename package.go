@@ -20,7 +20,7 @@ type Package struct {
 	Variant    string
 }
 
-func (pkg *Package) Get(force bool) error {
+func (pkg *Package) Get(force, dry bool) error {
 	log.Infof("checking %s\n", pkg.Name())
 
 	checkStarted := time.Now()
@@ -55,6 +55,11 @@ func (pkg *Package) Get(force bool) error {
 	}
 
 	log.Subf("latest %s (checked in %s)\n", remote, time.Since(checkStarted).Round(time.Millisecond))
+
+	if dry {
+		return nil
+	}
+
 	log.Stepf("installing %s %s\n", pkg.Name(), remote)
 
 	installStarted := time.Now()

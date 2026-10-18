@@ -31,11 +31,12 @@ tap get onino           # install or update the default CPU variant
 tap get onino:gpu       # install or switch to the GPU variant
 tap get onino:cpu       # explicitly select the CPU variant
 tap get --force onino   # reinstall without checking the installed version
+tap get --dry go bun     # show available updates without installing
 tap rm bun              # remove named packages
 tap ls                  # list installed catalog packages and versions
 tap find                # show the complete catalog
 tap find compiler       # search names and descriptions
-tap info go bun         # show descriptions, sources, paths and installed versions
+tap info go bun         # show package details, installed and latest remote versions
 tap --version           # tap version dev or the version supplied at build time
 tap --help
 ```
@@ -44,11 +45,13 @@ tap --help
 
 Use `tap get --force <package[:variant]>...` to reinstall the latest stable release without checking the installed version or variant, including when an older binary does not support its version flag. This can replace a newer installed version. Download verification and validation of the new binaries still apply.
 
+Use `tap get --dry <package[:variant]>...` to check versions without downloading or installing packages. It shows the latest version that would be installed, or reports that the selected variant is up to date. Combine it with `--force` to preview a forced reinstall.
+
 Variants share an install path, so selecting another replaces the installed variant. Tap records installed variants in `~/.config/tap.yml` on both Windows and Linux.
 
 `tap tap` checks the latest stable `coalaura/tap` release and replaces the running executable in place, following symlinks. Equal or newer versions are left alone; a `dev` build installs the latest stable release. The download's SHA-256 digest and reported version are verified before replacement. The version check runs from a staging directory beside the installed executable, so temporary directories can be mounted with `noexec`. Write access to the executable's directory is required. On Windows, the running executable is renamed to a `.tap-old` backup, restored if replacement fails and cleaned up by the next `tap tap` invocation if it remains locked.
 
-Installed status is discovered from each package's configured path, including installations made by the original upgrader. `ls` shows only catalog packages installed at those paths; `find` searches the entire catalog. `ls`, `find` and `info` work offline. Installed versions are read by invoking each binary with its configured version arguments, except PACE, which uses embedded Go build metadata. Tap does not inspect arbitrary programs elsewhere on `PATH`.
+Installed status is discovered from each package's configured path, including installations made by the original upgrader. `ls` shows only catalog packages installed at those paths; `find` searches the entire catalog. `ls` and `find` work offline. `info` shows the installed version when available and fetches the latest stable remote version, including for packages that are not installed. Installed versions are read by invoking each binary with its configured version arguments, except PACE, which uses embedded Go build metadata. Tap does not inspect arbitrary programs elsewhere on `PATH`.
 
 Command failures distinguish launch errors from exit codes and include captured output. On Linux, Tap checks existing executables for missing ELF loaders or shebang interpreters and reports signal termination separately. On Windows, common loader and crash status codes receive descriptive messages. Other exit codes remain numeric because their meanings depend on the program.
 

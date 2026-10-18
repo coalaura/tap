@@ -40,6 +40,10 @@ func NewCommand() *cli.Command {
 				Action:    getPackages,
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
+						Name:  "dry",
+						Usage: "show the version that would be installed without installing",
+					},
+					&cli.BoolFlag{
 						Name:  "force",
 						Usage: "reinstall without checking the installed version",
 					},
@@ -133,9 +137,14 @@ func updateTap(ctx context.Context, command *cli.Command) error {
 
 func getPackages(ctx context.Context, command *cli.Command) error {
 	force := command.Bool("force")
+	dry := command.Bool("dry")
 
 	return applyPackages(ctx, command, func(pkg *Package) error {
-		err := pkg.Get(force)
+		err := pkg.Get(force, dry)
+
+		if dry {
+			return err
+		}
 
 		// Finish a partially completed install even if its primary binary was already replaced.
 		return retryElevated(ctx, []string{"get", "--force", pkg.Name()}, err)
@@ -302,29 +311,34 @@ func packageInfo(ctx context.Context, command *cli.Command) error {
 
 		if !installed {
 			fmt.Fprintln(writer, "installed: no")
+		} else {
+			if len(definition.Variants) != 0 {
+				variant, err := pkg.InstalledVariant()
+				if err != nil {
+					return fmt.Errorf("%s: %w", definition.Name, err)
+				}
 
-			continue
-		}
+				if variant == "" {
+					variant = "unknown"
+				}
 
-		if len(definition.Variants) != 0 {
-			variant, err := pkg.InstalledVariant()
+				fmt.Fprintf(writer, "installed variant: %s\n", variant)
+			}
+
+			version, err := pkg.ResolveCurrentVersion()
 			if err != nil {
 				return fmt.Errorf("%s: %w", definition.Name, err)
 			}
 
-			if variant == "" {
-				variant = "unknown"
-			}
-
-			fmt.Fprintf(writer, "installed variant: %s\n", variant)
+			fmt.Fprintf(writer, "installed: %s\n", version)
 		}
 
-		version, err := pkg.ResolveCurrentVersion()
+		latest, err := pkg.FetchLatestVersion()
 		if err != nil {
 			return fmt.Errorf("%s: %w", definition.Name, err)
 		}
 
-		fmt.Fprintf(writer, "installed: %s\n", version)
+		fmt.Fprintf(writer, "latest: %s\n", latest)
 	}
 
 	return nil
