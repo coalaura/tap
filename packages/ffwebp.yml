@@ -2,4 +2,9 @@
 
 description: Self-contained media conversion toolkit with full codec support
 repository: coalaura/ffwebp
-asset: '{binary}_v{version}_full_{os}_{arch}{ext}'
+asset: '{binary}_v{version}_{variant}_{os}_{arch}{ext}'
+default_variant: full
+variants:
+  core: {}
+  full: {}
+  full-play: {}
