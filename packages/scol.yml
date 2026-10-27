@@ -1,0 +1,5 @@
+# yaml-language-server: $schema=./schema.json
+
+description: Simple SoundCloud downloader
+repository: coalaura/scol
+asset: '{binary}_v{version}_{os}{ext}'
