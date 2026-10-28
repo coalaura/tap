@@ -1,0 +1,5 @@
+# yaml-language-server: $schema=./schema.json
+
+description: Stream compressed remote backups over SSH
+repository: coalaura/getup
+asset: '{binary}_v{version}_{os}_{arch}{ext}'
