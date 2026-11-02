@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -19,15 +20,44 @@ const (
 	MaxMetadataSize = int64(8 << 20)
 )
 
+type fallbackTransport struct {
+	primary http.RoundTripper
+	ipv4    http.RoundTripper
+}
+
 var (
+	requestTransport = newHTTPTransport()
+
 	downloadClient = &http.Client{
-		Timeout: 15 * time.Minute,
+		Transport: requestTransport,
+		Timeout:   15 * time.Minute,
 	}
 
 	metadataClient = &http.Client{
-		Timeout: 30 * time.Second,
+		Transport: requestTransport,
+		Timeout:   30 * time.Second,
 	}
 )
+
+func (transport *fallbackTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	resp, err := transport.primary.RoundTrip(req)
+	if err != nil {
+		return resp, err
+	}
+
+	if resp.StatusCode != http.StatusNotFound || req.Method != http.MethodGet && req.Method != http.MethodHead {
+		return resp, nil
+	}
+
+	if req.Body != nil && req.Body != http.NoBody {
+		return resp, nil
+	}
+
+	// Some download hosts return 404 over IPv6 even when the file exists over IPv4.
+	resp.Body.Close()
+
+	return transport.ipv4.RoundTrip(req)
+}
 
 func DownloadTempFile(url, ext, expectedHash string) (string, error) {
 	file, err := os.CreateTemp("", "tap-*"+ext)
@@ -137,6 +167,20 @@ func ReadResponse(resp *http.Response, limit int64) ([]byte, error) {
 	}
 
 	return body, nil
+}
+
+func newHTTPTransport() *fallbackTransport {
+	ipv4 := http.DefaultTransport.(*http.Transport).Clone()
+	dialContext := ipv4.DialContext
+
+	ipv4.DialContext = func(ctx context.Context, network, address string) (net.Conn, error) {
+		return dialContext(ctx, "tcp4", address)
+	}
+
+	return &fallbackTransport{
+		primary: http.DefaultTransport,
+		ipv4:    ipv4,
+	}
 }
 
 func parseSHA256(value string) ([]byte, error) {
