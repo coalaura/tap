@@ -1,0 +1,5 @@
+# yaml-language-server: $schema=./schema.json
+
+description: Play a short chime to check audio output
+repository: coalaura/beep
+args: [version]

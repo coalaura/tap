@@ -1,0 +1,6 @@
+# yaml-language-server: $schema=./schema.json
+
+description: Turn plain-English questions into shell commands
+repository: coalaura/idk
+args: [version]
+asset: '{binary}_v{version}_{os}_{arch}{ext}'
