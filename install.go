@@ -58,20 +58,32 @@ func (pkg *Package) Install(version semver.SemVer) error {
 		}
 	}
 
-	for _, source := range sources {
-		err = os.Chmod(source, 0755)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Companions share the verified archive; only the primary binary is the version probe.
-	err = pkg.ValidateBinary(source, version)
+	err = pkg.PrepareDirectory()
 	if err != nil {
 		return err
 	}
 
-	err = pkg.PrepareDirectory()
+	// Validate on the destination filesystem so noexec temp mounts do not prevent installation.
+	stagingDirectory, err := os.MkdirTemp(filepath.Dir(pkg.Path), ".tap-install-*")
+	if err != nil {
+		return writeError(err)
+	}
+
+	defer os.RemoveAll(stagingDirectory)
+
+	for index, source := range sources {
+		staged := filepath.Join(stagingDirectory, filepath.Base(pkg.BinaryPath(index)))
+
+		err = CopyFileMode(source, staged, 0755)
+		if err != nil {
+			return err
+		}
+
+		sources[index] = staged
+	}
+
+	// Companions share the verified archive; only the primary binary is the version probe.
+	err = pkg.ValidateBinary(sources[0], version)
 	if err != nil {
 		return err
 	}
@@ -80,9 +92,9 @@ func (pkg *Package) Install(version semver.SemVer) error {
 	for index, source := range slices.Backward(sources) {
 		destination := pkg.BinaryPath(index)
 
-		err = CopyFileMode(source, destination, 0755)
+		err = ReplaceFile(source, destination)
 		if err != nil {
-			return err
+			return writeError(err)
 		}
 
 		if strings.HasPrefix(pkg.Target.Path, "{home}/") {
