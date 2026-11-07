@@ -21,6 +21,13 @@ type Package struct {
 }
 
 func (pkg *Package) Get(force, dry bool) error {
+	if !dry {
+		err := pkg.checkPermissions(false)
+		if err != nil {
+			return err
+		}
+	}
+
 	log.Infof("checking %s\n", pkg.Name())
 
 	checkStarted := time.Now()
@@ -58,11 +65,6 @@ func (pkg *Package) Get(force, dry bool) error {
 
 	if dry {
 		return nil
-	}
-
-	err = pkg.checkPermissions(false)
-	if err != nil {
-		return err
 	}
 
 	log.Stepf("installing %s %s\n", pkg.Name(), remote)

@@ -38,6 +38,11 @@ func UpdateTap() error {
 		return err
 	}
 
+	err = checkDestinationPermissions(executable)
+	if err != nil {
+		return err
+	}
+
 	if runtime.GOOS == "windows" {
 		// The previous process may have kept its renamed executable locked until it exited.
 		os.Remove(executable + ".tap-old")
@@ -72,11 +77,6 @@ func UpdateTap() error {
 	}
 
 	asset, err := release.FindAsset(name)
-	if err != nil {
-		return err
-	}
-
-	err = checkDestinationPermissions(executable)
 	if err != nil {
 		return err
 	}

@@ -72,7 +72,7 @@ tap get onino:gpu         # install or switch to the GPU variant
 
 Tap finds installed packages at these configured locations, rather than searching PATH. Add the relevant binary directories to PATH to run the tools.
 
-- **Linux:** Tap checks write permissions and uses `sudo` when needed, with a retry if a later write fails. Dry runs and up-to-date packages do not prompt for elevation.
+- **Linux:** Tap checks write permissions and uses `sudo` when needed before checking versions for installs and self-updates, with a retry if a later write fails. This can prompt even when already up to date; use `get --dry` to check package versions without elevation.
 - **Windows:** MSI packages require administrator privileges. Tap does not automatically elevate.
 - **Downloads:** SHA-256 checksums and installed versions are verified. Set `GITHUB_TOKEN` if you need authenticated GitHub API access.
 
