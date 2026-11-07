@@ -110,6 +110,10 @@ func downloadToFile(url, expectedHash string, file *os.File) error {
 		return fmt.Errorf("download is too large (%d bytes)", resp.ContentLength)
 	}
 
+	if resp.ContentLength > 0 {
+		log.Subf("downloading %s\n", formatFileSize(resp.ContentLength))
+	}
+
 	hasher := sha256.New()
 
 	reader := io.LimitReader(resp.Body, MaxDownloadSize+1)
@@ -143,6 +147,10 @@ func downloadToFile(url, expectedHash string, file *os.File) error {
 
 	if subtle.ConstantTimeCompare(actual, hash) != 1 {
 		return fmt.Errorf("sha256 mismatch: expected %s, got %s", hex.EncodeToString(hash), hex.EncodeToString(actual))
+	}
+
+	if resp.ContentLength <= 0 {
+		log.Subf("downloaded %s\n", formatFileSize(n))
 	}
 
 	return nil
@@ -197,4 +205,17 @@ func parseSHA256(value string) ([]byte, error) {
 	}
 
 	return hash, nil
+}
+
+func formatFileSize(size int64) string {
+	switch {
+	case size >= 1<<30:
+		return fmt.Sprintf("%.1f GiB", float64(size)/(1<<30))
+	case size >= 1<<20:
+		return fmt.Sprintf("%.1f MiB", float64(size)/(1<<20))
+	case size >= 1<<10:
+		return fmt.Sprintf("%.1f KiB", float64(size)/(1<<10))
+	default:
+		return fmt.Sprintf("%d B", size)
+	}
 }
