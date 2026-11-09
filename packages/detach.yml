@@ -1,0 +1,5 @@
+# yaml-language-server: $schema=./schema.json
+
+description: Run commands in the background detached from the terminal
+repository: coalaura/detach
+args: [version]
