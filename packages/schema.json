@@ -17,13 +17,13 @@
 			"pattern": "\\S"
 		},
 		"source": {
-			"description": "GitHub releases, a GitHub-hosted Windows MSI, the PACE overlay in Go's bin directory, or the dedicated Go/Zig installer using official downloads.",
+			"description": "GitHub releases, the PACE overlay in Go's bin directory, or the dedicated Go/Zig installer using official downloads. Windows GitHub packages can select the MSI installer per platform.",
 			"type": "string",
-			"enum": ["github", "msi", "go", "pace", "zig"],
+			"enum": ["github", "go", "pace", "zig"],
 			"default": "github"
 		},
 		"repository": {
-			"description": "GitHub owner/repository. Required when source is github, msi, pace or omitted.",
+			"description": "GitHub owner/repository. Required when source is github, pace or omitted.",
 			"type": "string",
 			"pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*/[A-Za-z0-9][A-Za-z0-9._-]*$",
 			"examples": ["coalaura/builder"]
@@ -81,7 +81,12 @@
 			"minProperties": 1,
 			"additionalProperties": false,
 			"properties": {
-				"linux-amd64": {"$ref": "#/definitions/target"},
+				"linux-amd64": {
+					"allOf": [
+						{"$ref": "#/definitions/target"},
+						{"properties": {"installer": {"const": ""}}}
+					]
+				},
 				"windows-amd64": {"$ref": "#/definitions/target"}
 			}
 		}
@@ -176,7 +181,7 @@
 			"if": {
 				"required": ["source"],
 				"properties": {
-					"source": {"enum": ["msi", "go", "zig"]}
+					"source": {"enum": ["go", "zig"]}
 				}
 			},
 			"then": {
@@ -187,39 +192,23 @@
 		},
 		{
 			"if": {
-				"required": ["source"],
-				"properties": {
-					"source": {"const": "msi"}
-				}
-			},
-			"then": {
 				"required": ["platforms"],
 				"properties": {
 					"platforms": {
 						"required": ["windows-amd64"],
 						"properties": {
-							"linux-amd64": false,
 							"windows-amd64": {
-								"required": ["path"],
-								"properties": {
-									"asset": {"pattern": "(?:^$|\\.msi$)"},
-									"executable": {"const": ""},
-									"path": {"pattern": "^\\{(?:bin|home|programfiles)\\}/"}
-								}
+								"required": ["installer"],
+								"properties": {"installer": {"const": "msi"}}
 							}
 						}
 					}
 				}
 			},
-			"else": {
+			"then": {
 				"properties": {
-					"platforms": {
-						"additionalProperties": {
-							"properties": {
-								"path": {"pattern": "^(?:$|\\{(?:bin|home)\\}/)(?:[^{}]|\\{(?:name|binary|os|arch|ext|bin|home)\\})*$"}
-							}
-						}
-					}
+					"source": {"const": "github"},
+					"companions": {"maxItems": 0}
 				}
 			}
 		}
@@ -242,6 +231,12 @@
 			"type": "object",
 			"additionalProperties": false,
 			"properties": {
+				"installer": {
+					"description": "Use msi for a Windows GitHub release installer. Otherwise Tap extracts archives or installs raw executables directly. Shared by all variants.",
+					"type": "string",
+					"enum": ["", "msi"],
+					"default": ""
+				},
 				"asset": {"$ref": "#/definitions/asset"},
 				"executable": {
 					"description": "Relative archive member path using forward slashes. Omit or leave empty to find a unique matching binary filename. Supports the same placeholders as asset.",
@@ -271,7 +266,29 @@
 						}
 					]
 				}
-			}
+			},
+			"allOf": [
+				{
+					"if": {
+						"required": ["installer"],
+						"properties": {"installer": {"const": "msi"}}
+					},
+					"then": {
+						"required": ["path"],
+						"properties": {
+							"asset": {"pattern": "(?:^$|\\.msi$)"},
+							"executable": {"const": ""},
+							"path": {"pattern": "^\\{(?:bin|home|programfiles)\\}/"}
+						}
+					},
+					"else": {
+						"properties": {
+							"asset": {"not": {"pattern": "\\.msi$"}},
+							"path": {"pattern": "^(?:$|\\{(?:bin|home)\\}/)(?:[^{}]|\\{(?:name|binary|os|arch|ext|bin|home)\\})*$"}
+						}
+					}
+				}
+			]
 		},
 		"variant": {
 			"type": "object",
@@ -301,6 +318,7 @@
 			"type": "object",
 			"additionalProperties": false,
 			"properties": {
+				"installer": {"const": ""},
 				"asset": {"const": ""},
 				"executable": {"const": ""},
 				"path": {"const": ""}

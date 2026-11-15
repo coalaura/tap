@@ -1,9 +1,16 @@
 # yaml-language-server: $schema=./schema.json
 
 description: Hardware-accelerated GPU terminal emulator
-source: msi
 repository: raphamorim/rio
 platforms:
+  linux-amd64:
+    asset: rioterm_{version}_amd64_{variant}.deb
+    executable: usr/bin/rio
   windows-amd64:
+    installer: msi
     asset: rio-installer-x86_64.msi
     path: '{programfiles}/Rio/rio.exe'
+default_variant: x11
+variants:
+  x11: {}
+  wayland: {}

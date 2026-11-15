@@ -20,7 +20,7 @@ func validatePackage(definition *catalog.Package) error {
 	}
 
 	switch definition.Source {
-	case "github", "msi", "pace":
+	case "github", "pace":
 		owner, repository, ok := strings.Cut(definition.Repository, "/")
 		if !ok || !validRepositoryPart(owner) || !validRepositoryPart(repository) {
 			return errors.New("repository must be owner/name")
@@ -34,7 +34,7 @@ func validatePackage(definition *catalog.Package) error {
 			return errors.New("go and zig sources require the matching binary name")
 		}
 	default:
-		return fmt.Errorf("unknown source %q (expected github, msi, go, pace or zig)", definition.Source)
+		return fmt.Errorf("unknown source %q (expected github, go, pace or zig)", definition.Source)
 	}
 
 	if len(definition.Companions) != 0 && definition.Source != "github" && definition.Source != "pace" {
@@ -64,8 +64,8 @@ func validatePackage(definition *catalog.Package) error {
 	}
 
 	if definition.Checksums != "" {
-		if definition.Source != "github" && definition.Source != "msi" && definition.Source != "pace" {
-			return errors.New("checksums require the github, msi or pace source")
+		if definition.Source != "github" && definition.Source != "pace" {
+			return errors.New("checksums require the github or pace source")
 		}
 
 		err := validateTemplate(definition.Checksums, false)
@@ -87,15 +87,7 @@ func validatePackage(definition *catalog.Package) error {
 			return fmt.Errorf("unsupported platform %q", platform)
 		}
 
-		if definition.Source == "msi" && platform != "windows-amd64" {
-			return errors.New("msi requires windows-amd64")
-		}
-
-		if strings.Contains(target.Path, "{programfiles}") && (definition.Source != "msi" || platform != "windows-amd64") {
-			return errors.New("{programfiles} requires a Windows MSI installer")
-		}
-
-		err := validateTarget(definition, &target)
+		err := validateTarget(definition, platform, &target)
 		if err != nil {
 			return fmt.Errorf("%s: %w", platform, err)
 		}
@@ -157,6 +149,10 @@ func validateVariants(definition *catalog.Package) error {
 			if target.Path != "" {
 				return fmt.Errorf("variant %s: install paths must be shared with the package", name)
 			}
+
+			if target.Installer != "" {
+				return fmt.Errorf("variant %s: installers must be shared with the package", name)
+			}
 		}
 
 		targets := make(map[string]catalog.Target, len(definition.Platforms))
@@ -175,7 +171,7 @@ func validateVariants(definition *catalog.Package) error {
 				base.Executable = override.Executable
 			}
 
-			err := validateTarget(definition, &base)
+			err := validateTarget(definition, platform, &base)
 			if err != nil {
 				return fmt.Errorf("variant %s %s: %w", name, platform, err)
 			}
@@ -191,7 +187,25 @@ func validateVariants(definition *catalog.Package) error {
 	return nil
 }
 
-func validateTarget(definition *catalog.Package, target *catalog.Target) error {
+func validateTarget(definition *catalog.Package, platform string, target *catalog.Target) error {
+	switch target.Installer {
+	case "":
+	case "msi":
+		if definition.Source != "github" || platform != "windows-amd64" {
+			return errors.New("msi requires the github source and windows-amd64")
+		}
+
+		if len(definition.Companions) != 0 {
+			return errors.New("msi does not support companions")
+		}
+	default:
+		return fmt.Errorf("unknown installer %q (expected msi or empty)", target.Installer)
+	}
+
+	if strings.Contains(target.Path, "{programfiles}") && target.Installer != "msi" {
+		return errors.New("{programfiles} requires a Windows MSI installer")
+	}
+
 	if definition.Source == "pace" && target.Path != "" {
 		return errors.New("pace uses the Go bin directory as its fixed install location")
 	}
@@ -208,10 +222,12 @@ func validateTarget(definition *catalog.Package, target *catalog.Target) error {
 		target.Asset = definition.Asset
 	}
 
-	if definition.Source == "msi" {
+	if target.Installer == "msi" {
 		if !strings.HasSuffix(target.Asset, ".msi") || target.Executable != "" || target.Path == "" {
 			return errors.New("msi requires an .msi asset, an explicit install path and no archive executable")
 		}
+	} else if strings.HasSuffix(target.Asset, ".msi") {
+		return errors.New(".msi assets require the msi installer")
 	}
 
 	if target.Path == "" && definition.Source != "pace" {
@@ -245,7 +261,7 @@ func validateTarget(definition *catalog.Package, target *catalog.Target) error {
 		return nil
 	}
 
-	programFilesPath := definition.Source == "msi" && strings.HasPrefix(target.Path, "{programfiles}/")
+	programFilesPath := target.Installer == "msi" && strings.HasPrefix(target.Path, "{programfiles}/")
 	if !strings.HasPrefix(target.Path, "{bin}/") && !strings.HasPrefix(target.Path, "{home}/") && !programFilesPath {
 		return errors.New("path must start with {bin}/ or {home}/, or {programfiles}/ for MSI installers")
 	}

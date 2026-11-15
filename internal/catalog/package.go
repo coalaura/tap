@@ -17,6 +17,7 @@ type Package struct {
 }
 
 type Target struct {
+	Installer  string `yaml:"installer"`
 	Asset      string `yaml:"asset"`
 	Executable string `yaml:"executable"`
 	Path       string `yaml:"path"`

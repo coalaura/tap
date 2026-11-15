@@ -32,7 +32,7 @@ func (pkg *Package) Install(version semver.SemVer) error {
 
 	defer os.Remove(path)
 
-	if pkg.Definition.Source == "msi" {
+	if pkg.Target.Installer == "msi" {
 		return pkg.InstallMSI(path)
 	}
 
@@ -112,6 +112,8 @@ func (pkg *Package) Extract(path, directory, asset, version string) (string, err
 	var err error
 
 	switch {
+	case strings.HasSuffix(asset, ".deb"):
+		err = ExtractDebFile(path, directory)
 	case strings.HasSuffix(asset, ".tar.gz"):
 		err = ExtractTarGzFile(path, directory)
 	case strings.HasSuffix(asset, ".tar.xz"):

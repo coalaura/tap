@@ -159,12 +159,12 @@ func (pkg *Package) Remove() error {
 
 	removeStarted := time.Now()
 
-	switch pkg.Definition.Source {
-	case "go":
+	switch {
+	case pkg.Definition.Source == "go":
 		err = RemoveGo()
-	case "zig":
+	case pkg.Definition.Source == "zig":
 		err = writeError(os.RemoveAll(filepath.Dir(pkg.Path)))
-	case "msi":
+	case pkg.Target.Installer == "msi":
 		err = pkg.RemoveMSI()
 	default:
 		for index := range len(pkg.Definition.Companions) + 1 {
