@@ -304,7 +304,7 @@ func ResolvePackage(definition *catalog.Package, variant string) (*Package, erro
 	}
 
 	if variant == "" {
-		variant = definition.DefaultVariant
+		variant = defaultPackageVariant(definition)
 	}
 
 	if variant != "" {
@@ -354,4 +354,25 @@ func ResolvePackage(definition *catalog.Package, variant string) (*Package, erro
 	}
 
 	return pkg, nil
+}
+
+func defaultPackageVariant(definition *catalog.Package) string {
+	if runtime.GOOS != "linux" || definition.Name != "rio" {
+		return definition.DefaultVariant
+	}
+
+	session := os.Getenv("XDG_SESSION_TYPE")
+
+	switch session {
+	case "wayland":
+		return "wayland"
+	case "x11":
+		return "x11"
+	}
+
+	if os.Getenv("WAYLAND_DISPLAY") != "" {
+		return "wayland"
+	}
+
+	return definition.DefaultVariant
 }

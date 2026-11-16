@@ -81,7 +81,7 @@ Tap finds installed packages at these configured locations, rather than searchin
 - **PACE:** Requires the exact matching Go release. Use `tap get go pace` to update both in order. Replacing Go's directory on Linux removes PACE, so reinstall PACE afterwards if updating Go separately.
 - **Companions:** `findutils` includes `find`, `locate`, `updatedb` and `xargs`; `age` includes `age-keygen`; PACE includes `compilepe` and `asmpe`. Companions are installed and removed together.
 - **diffutils:** Uses a multi-call binary: `diffutils diff ...` or `diffutils cmp ...`.
-- **Rio:** Windows uses the official MSI. Linux extracts the executable from the upstream DEB; shared-library dependencies must already be installed, and desktop files, icons and terminfo are not installed. Linux defaults to X11; use `tap get rio:wayland` for Wayland or `tap get rio:x11` to switch back. Both variants use the same Windows MSI.
+- **Rio:** Windows uses the official MSI. Linux extracts the executable from the upstream DEB; shared-library dependencies must already be installed, and desktop files, icons and terminfo are not installed. Linux selects Wayland or X11 from `XDG_SESSION_TYPE`, falling back to Wayland when `WAYLAND_DISPLAY` is set and X11 otherwise. Use `tap get rio:wayland` or `tap get rio:x11` to select explicitly. Both variants use the same Windows MSI.
 - **Removal:** `rm` removes executables, or the complete toolchain directory for Go and Zig. Bun's cache, configuration and other user data remain. Removing Go or Rio on Windows downloads the matching official MSI and requires an MSI-installed distribution.
 
 ## Add a package

@@ -306,7 +306,7 @@ func packageInfo(ctx context.Context, command *cli.Command) error {
 		fmt.Fprintf(writer, "%s - %s\nsource: %s\n", pkg.Name(), strings.ToLower(definition.Description), definition.Source)
 
 		if len(definition.Variants) != 0 {
-			fmt.Fprintf(writer, "variants: %s (default: %s)\n", strings.Join(slices.Sorted(maps.Keys(definition.Variants)), ", "), definition.DefaultVariant)
+			fmt.Fprintf(writer, "variants: %s (default: %s)\n", strings.Join(slices.Sorted(maps.Keys(definition.Variants)), ", "), defaultPackageVariant(definition))
 		}
 
 		if definition.Repository != "" {
