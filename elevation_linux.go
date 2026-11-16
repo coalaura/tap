@@ -32,9 +32,9 @@ func retryElevated(ctx context.Context, arguments []string, cause error) error {
 	}
 
 	if permission.preflight {
-		log.Warnf("%s; using sudo for root permissions\n", cause)
+		log.Warnf("need sudo for write access\n")
 	} else {
-		log.Warnf("%s; retrying with sudo for root permissions\n", cause)
+		log.Warnf("retrying with sudo for write access\n")
 	}
 
 	args := make([]string, 0, len(arguments)+3)
