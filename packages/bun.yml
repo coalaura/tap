@@ -12,3 +12,11 @@ platforms:
     asset: bun-windows-x64.zip
     executable: bun-windows-x64/bun.exe
     path: '{home}/.bun/bin/bun.exe'
+default_variant: glibc
+variants:
+  glibc: {}
+  musl:
+    platforms:
+      linux-amd64:
+        asset: bun-linux-x64-musl.zip
+        executable: bun-linux-x64-musl/bun
