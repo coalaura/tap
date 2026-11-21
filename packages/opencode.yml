@@ -1,0 +1,11 @@
+# yaml-language-server: $schema=./schema.json
+
+description: An open-source AI coding agent for the terminal
+repository: anomalyco/opencode
+platforms:
+  linux-amd64:
+    asset: opencode-linux-x64.tar.gz
+    executable: opencode
+  windows-amd64:
+    asset: opencode-windows-x64.zip
+    executable: opencode.exe

@@ -1,0 +1,5 @@
+# yaml-language-server: $schema=./schema.json
+
+description: Run tools and agents in an isolated Linux workspace powered by OpenVMM
+repository: coalaura/contain
+checksums: SHA256SUMS
