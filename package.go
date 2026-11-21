@@ -357,7 +357,22 @@ func ResolvePackage(definition *catalog.Package, variant string) (*Package, erro
 }
 
 func defaultPackageVariant(definition *catalog.Package) string {
-	if runtime.GOOS != "linux" || definition.Name != "rio" {
+	if runtime.GOOS != "linux" {
+		return definition.DefaultVariant
+	}
+
+	if runtime.GOARCH == "amd64" && definition.DefaultVariant == "glibc" {
+		musl := definition.Variants["musl"]
+		if _, supported := musl.Platforms["linux-amd64"]; supported {
+			// Check the interpreter used by upstream glibc binaries rather than the distribution.
+			_, err := os.Stat("/lib64/ld-linux-x86-64.so.2")
+			if errors.Is(err, os.ErrNotExist) {
+				return "musl"
+			}
+		}
+	}
+
+	if definition.Name != "rio" {
 		return definition.DefaultVariant
 	}
 

@@ -57,6 +57,7 @@ tap get onino:gpu         # install or switch to the GPU variant
 
 - `--force` skips the installed-version check and can replace a newer version with the latest stable release.
 - Variants share an install path; switching variants replaces the installed one.
+- On Linux, packages with a `glibc` default and a `musl` alternative automatically use musl when the glibc loader `/lib64/ld-linux-x86-64.so.2` is missing. Use `package:glibc` or `package:musl` to select explicitly.
 - Installed variants are recorded in `~/.config/tap.yml` on both platforms.
 
 ## Install locations
