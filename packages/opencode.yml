@@ -9,3 +9,10 @@ platforms:
   windows-amd64:
     asset: opencode-windows-x64.zip
     executable: opencode.exe
+default_variant: glibc
+variants:
+  glibc: {}
+  musl:
+    platforms:
+      linux-amd64:
+        asset: opencode-linux-x64-musl.tar.gz
