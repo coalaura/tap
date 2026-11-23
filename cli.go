@@ -201,6 +201,8 @@ func listPackages(ctx context.Context, command *cli.Command) error {
 		return errors.New("usage: tap ls")
 	}
 
+	log.Infof("collecting installed packages...\n")
+
 	packages, err := SelectPackages(nil)
 	if err != nil {
 		return err
