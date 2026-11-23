@@ -41,6 +41,8 @@ func (pkg *Package) Get(force, dry bool) error {
 		if err != nil {
 			return err
 		}
+
+		log.Subf("current %s\n", local)
 	}
 
 	remote, err := pkg.FetchLatestVersion()
