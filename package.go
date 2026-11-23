@@ -36,7 +36,7 @@ func (pkg *Package) Get(ctx context.Context, force, dry bool) error {
 			return err
 		}
 
-		log.Subf("current %s\n", local)
+		log.Subf("current: %s\n", local)
 	}
 
 	remote, err := pkg.FetchLatestVersion()
@@ -57,7 +57,7 @@ func (pkg *Package) Get(ctx context.Context, force, dry bool) error {
 		}
 	}
 
-	log.Subf("latest %s (checked in %s)\n", remote, time.Since(checkStarted).Round(time.Millisecond))
+	log.Subf("latest: %s (checked in %s)\n", remote, time.Since(checkStarted).Round(time.Millisecond))
 
 	if dry {
 		return nil

@@ -22,7 +22,7 @@ func UpdateTap() error {
 	local := semver.Invalid
 
 	if Version == "dev" {
-		log.Subln("current dev")
+		log.Subln("current: dev")
 	} else {
 		var err error
 
@@ -31,7 +31,7 @@ func UpdateTap() error {
 			return fmt.Errorf("invalid tap version %q: %w", Version, err)
 		}
 
-		log.Subf("current %s\n", local)
+		log.Subf("current: %s\n", local)
 	}
 
 	checkStarted := time.Now()
@@ -52,7 +52,7 @@ func UpdateTap() error {
 		return nil
 	}
 
-	log.Subf("latest %s (checked in %s)\n", remote, time.Since(checkStarted).Round(time.Millisecond))
+	log.Subf("latest: %s (checked in %s)\n", remote, time.Since(checkStarted).Round(time.Millisecond))
 
 	name := "tap-" + runtime.GOOS + "-" + runtime.GOARCH
 
