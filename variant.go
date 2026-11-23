@@ -6,6 +6,8 @@ import (
 	"errors"
 	"io"
 	"os"
+	"runtime"
+	"strings"
 )
 
 type variantRecord struct {
@@ -14,8 +16,8 @@ type variantRecord struct {
 }
 
 func (pkg *Package) InstalledVariant() (string, error) {
-	if len(pkg.Definition.Variants) == 0 {
-		return "", nil
+	if !pkg.hasDistinctVariants() {
+		return pkg.Variant, nil
 	}
 
 	config, err := ReadConfig()
@@ -47,7 +49,7 @@ func (pkg *Package) InstalledVariant() (string, error) {
 }
 
 func (pkg *Package) RecordVariant() error {
-	if len(pkg.Definition.Variants) == 0 {
+	if !pkg.hasDistinctVariants() {
 		return nil
 	}
 
@@ -100,6 +102,29 @@ func (pkg *Package) RemoveVariantRecord() error {
 	delete(config.Packages, pkg.Definition.Name)
 
 	return WriteConfig(config)
+}
+
+func (pkg *Package) hasDistinctVariants() bool {
+	if len(pkg.Definition.Variants) == 0 {
+		return false
+	}
+
+	// Identical templates still select different binaries when they contain {variant}.
+	if strings.Contains(pkg.Target.Asset, "{variant}") || strings.Contains(pkg.Target.Executable, "{variant}") || strings.Contains(pkg.Target.Path, "{variant}") {
+		return true
+	}
+
+	platform := runtime.GOOS + "-" + runtime.GOARCH
+
+	for _, variant := range pkg.Definition.Variants {
+		target, supported := variant.Platforms[platform]
+		if supported && target != pkg.Target {
+			return true
+		}
+	}
+
+	// Linux-only variants such as Rio's X11/Wayland share one Windows binary.
+	return false
 }
 
 func binaryDigest(path string) (string, error) {
