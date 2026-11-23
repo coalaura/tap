@@ -17,9 +17,13 @@ func UpdateTap() error {
 		return fmt.Errorf("tap does not support %s/%s", runtime.GOOS, runtime.GOARCH)
 	}
 
+	log.Infoln("checking tap")
+
 	local := semver.Invalid
 
-	if Version != "dev" {
+	if Version == "dev" {
+		log.Subln("current dev")
+	} else {
 		var err error
 
 		local, err = semver.ParseSemVer(Version, true)
@@ -29,8 +33,6 @@ func UpdateTap() error {
 
 		log.Subf("current %s\n", local)
 	}
-
-	log.Infoln("checking tap")
 
 	checkStarted := time.Now()
 
