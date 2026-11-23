@@ -164,7 +164,7 @@ func collectPackageUpdates(ctx context.Context) ([]packageUpdate, error) {
 		}
 
 		if err == nil {
-			log.Infof("checking %s...\n", pkg.Definition.Name)
+			log.Stepf("checking %s...\n", pkg.Definition.Name)
 
 			check.Err = check.check()
 		}
