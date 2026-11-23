@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -20,14 +21,7 @@ type Package struct {
 	Variant    string
 }
 
-func (pkg *Package) Get(force, dry bool) error {
-	if !dry {
-		err := pkg.checkPermissions(false)
-		if err != nil {
-			return err
-		}
-	}
-
+func (pkg *Package) Get(ctx context.Context, force, dry bool) error {
 	log.Infof("checking %s\n", pkg.Name())
 
 	checkStarted := time.Now()
@@ -69,7 +63,7 @@ func (pkg *Package) Get(force, dry bool) error {
 		return nil
 	}
 
-	return pkg.installVersion(remote)
+	return installResolvedPackage(ctx, pkg, remote)
 }
 
 func (pkg *Package) installVersion(version semver.SemVer) error {

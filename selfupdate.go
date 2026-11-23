@@ -26,29 +26,11 @@ func UpdateTap() error {
 		if err != nil {
 			return fmt.Errorf("invalid tap version %q: %w", Version, err)
 		}
+
+		log.Subf("current %s\n", local)
 	}
 
-	executable, err := os.Executable()
-	if err != nil {
-		return err
-	}
-
-	executable, err = filepath.EvalSymlinks(executable)
-	if err != nil {
-		return err
-	}
-
-	err = checkDestinationPermissions(executable)
-	if err != nil {
-		return err
-	}
-
-	if runtime.GOOS == "windows" {
-		// The previous process may have kept its renamed executable locked until it exited.
-		os.Remove(executable + ".tap-old")
-	}
-
-	log.Infof("checking tap\n")
+	log.Infoln("checking tap")
 
 	checkStarted := time.Now()
 
@@ -79,6 +61,26 @@ func UpdateTap() error {
 	asset, err := release.FindAsset(name)
 	if err != nil {
 		return err
+	}
+
+	executable, err := os.Executable()
+	if err != nil {
+		return err
+	}
+
+	executable, err = filepath.EvalSymlinks(executable)
+	if err != nil {
+		return err
+	}
+
+	err = checkDestinationPermissions(executable)
+	if err != nil {
+		return err
+	}
+
+	if runtime.GOOS == "windows" {
+		// The previous process may have kept its renamed executable locked until it exited.
+		os.Remove(executable + ".tap-old")
 	}
 
 	log.Stepf("updating tap %s\n", remote)

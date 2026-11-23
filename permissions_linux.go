@@ -116,6 +116,5 @@ func preflightPermissionError(path string, cause error) error {
 			Path: path,
 			Err:  cause,
 		},
-		preflight: true,
 	}
 }

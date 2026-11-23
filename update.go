@@ -67,7 +67,7 @@ func updatePackages(ctx context.Context, command *cli.Command) error {
 		return errors.New("usage: tap up [--dry] [--yes]")
 	}
 
-	log.Infof("collecting installed packages...\n")
+	log.Infoln("collecting installed packages...")
 
 	checks, err := collectPackageUpdates(ctx)
 	if err != nil {
@@ -83,11 +83,11 @@ func updatePackages(ctx context.Context, command *cli.Command) error {
 	if len(plan) == 0 {
 		switch {
 		case len(failures) != 0:
-			log.Infof("no updates available for the packages checked successfully\n")
+			log.Infoln("no updates available for the packages checked successfully")
 		case len(checks) == 0:
-			log.Infof("no installed packages found\n")
+			log.Infoln("no installed packages found")
 		default:
-			log.Infof("all installed packages are up to date\n")
+			log.Infoln("all installed packages are up to date")
 		}
 
 		return errors.Join(failures...)
@@ -109,7 +109,7 @@ func updatePackages(ctx context.Context, command *cli.Command) error {
 		}
 
 		if !confirmed {
-			log.Infof("update cancelled\n")
+			log.Infoln("update cancelled")
 
 			return errors.Join(failures...)
 		}

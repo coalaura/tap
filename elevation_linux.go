@@ -11,7 +11,7 @@ import (
 )
 
 func retryElevated(ctx context.Context, arguments []string, cause error) error {
-	permission, denied := errors.AsType[*writePermissionError](cause)
+	_, denied := errors.AsType[*writePermissionError](cause)
 	if !denied || os.Geteuid() == 0 {
 		return cause
 	}
@@ -31,11 +31,7 @@ func retryElevated(ctx context.Context, arguments []string, cause error) error {
 		return errors.Join(cause, err)
 	}
 
-	if permission.preflight {
-		log.Warnf("need sudo for write access\n")
-	} else {
-		log.Warnf("retrying with sudo for write access\n")
-	}
+	log.Warnln("need sudo for write access")
 
 	args := make([]string, 0, len(arguments)+3)
 	args = append(args, "--user=root", "--", executable)
