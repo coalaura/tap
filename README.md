@@ -80,7 +80,7 @@ Tap finds installed packages at these configured locations, rather than searchin
 
 - **Linux:** Tap checks versions first and uses `sudo` only when an installation or self-update is needed and the destination requires it, with a retry if a later write fails. Already up-to-date packages and `get --dry` do not prompt for elevation.
 - **Windows:** MSI packages require administrator privileges. Tap does not automatically elevate.
-- **Downloads:** SHA-256 checksums and installed versions are verified. Set `GITHUB_TOKEN` if you need authenticated GitHub API access.
+- **Downloads:** SHA-256 checksums and installed versions are verified. Latest-version checks do not use the GitHub API. For a higher API request budget when fetching release assets, optionally add `github_token: "YOUR_TOKEN"` to `~/.config/tap.yml`. A non-empty `GITHUB_TOKEN` environment variable takes precedence.
 
 ### Package notes
 

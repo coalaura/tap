@@ -11,7 +11,8 @@ import (
 )
 
 type Config struct {
-	Packages map[string]variantRecord `yaml:"packages,omitempty"`
+	GitHubToken string                   `yaml:"github_token,omitempty"`
+	Packages    map[string]variantRecord `yaml:"packages,omitempty"`
 }
 
 func ConfigPath() (string, error) {
@@ -98,7 +99,7 @@ func WriteConfig(config Config) error {
 		return err
 	}
 
-	err = os.Chmod(file.Name(), 0644)
+	err = os.Chmod(file.Name(), 0600)
 	if err != nil {
 		return err
 	}

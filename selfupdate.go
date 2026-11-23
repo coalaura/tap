@@ -36,12 +36,12 @@ func UpdateTap() error {
 
 	checkStarted := time.Now()
 
-	release, err := FetchLatestGitHubRelease(tapRepository)
+	tag, err := FetchLatestGitHubTag(tapRepository)
 	if err != nil {
 		return err
 	}
 
-	remote, err := ParseVersionTag(release.TagName, "v")
+	remote, err := ParseVersionTag(tag, "v")
 	if err != nil {
 		return err
 	}
@@ -60,7 +60,7 @@ func UpdateTap() error {
 		name += ".exe"
 	}
 
-	asset, err := release.FindAsset(name)
+	asset, err := FetchGitHubAsset(tapRepository, tag, name)
 	if err != nil {
 		return err
 	}

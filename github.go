@@ -26,20 +26,6 @@ type GitHubRelease struct {
 	Assets     []GitHubAsset `json:"assets"`
 }
 
-func (release *GitHubRelease) FindAsset(name string) (*GitHubAsset, error) {
-	asset, err := release.findAsset(name)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = parseSHA256(asset.Digest)
-	if err != nil {
-		return nil, fmt.Errorf("asset %s: %w", name, err)
-	}
-
-	return asset, nil
-}
-
 func (release *GitHubRelease) findAsset(name string) (*GitHubAsset, error) {
 	for index := range release.Assets {
 		asset := &release.Assets[index]
@@ -61,12 +47,12 @@ func (pkg *Package) FetchLatestVersion() (semver.SemVer, error) {
 		return FetchLatestZigVersion()
 	}
 
-	release, err := FetchLatestGitHubRelease(pkg.Definition.Repository)
+	tag, err := FetchLatestGitHubTag(pkg.Definition.Repository)
 	if err != nil {
 		return semver.Invalid, err
 	}
 
-	return ParseVersionTag(release.TagName, pkg.Definition.Prefix)
+	return ParseVersionTag(tag, pkg.Definition.Prefix)
 }
 
 func (pkg *Package) Download(version semver.SemVer) (string, error) {
@@ -82,19 +68,50 @@ func (pkg *Package) Download(version semver.SemVer) (string, error) {
 	return DownloadTempFile(info.URL, filepath.Ext(asset), info.Digest)
 }
 
-func FetchLatestGitHubRelease(repository string) (*GitHubRelease, error) {
-	endpoint := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repository)
+func FetchLatestGitHubTag(repository string) (string, error) {
+	endpoint := fmt.Sprintf("https://github.com/%s/releases/latest", repository)
 
-	release, err := fetchGitHubRelease(endpoint)
+	req, err := http.NewRequest(http.MethodHead, endpoint, nil)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	if release.Draft || release.Prerelease {
-		return nil, errors.New("latest release is not stable")
+	req.Header.Set("User-Agent", "tap/"+Version)
+
+	client := *metadataClient
+
+	client.CheckRedirect = func(_ *http.Request, _ []*http.Request) error {
+		return http.ErrUseLastResponse
 	}
 
-	return release, nil
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+
+	defer resp.Body.Close()
+
+	switch resp.StatusCode {
+	case http.StatusMovedPermanently, http.StatusFound, http.StatusSeeOther, http.StatusTemporaryRedirect, http.StatusPermanentRedirect:
+	default:
+		return "", fmt.Errorf("latest release lookup returned %s", strings.ToLower(resp.Status))
+	}
+
+	location, err := resp.Location()
+	if err != nil {
+		return "", fmt.Errorf("latest release redirect: %w", err)
+	}
+
+	prefix := "/" + repository + "/releases/tag/"
+
+	escapedTag, validPath := strings.CutPrefix(location.EscapedPath(), prefix)
+	validOrigin := location.Scheme == "https" && location.Host == "github.com" && location.User == nil
+
+	if !validOrigin || !validPath || escapedTag == "" || location.RawQuery != "" || location.Fragment != "" {
+		return "", errors.New("latest release did not redirect to the repository's release tag")
+	}
+
+	return url.PathUnescape(escapedTag)
 }
 
 func DownloadGitHubAssetTemp(repository, tag, asset, ext string) (string, error) {
@@ -189,6 +206,15 @@ func githubRequest(uri string) (*http.Response, error) {
 	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
 
 	token := strings.TrimSpace(os.Getenv("GITHUB_TOKEN"))
+	if token == "" {
+		config, err := ReadConfig()
+		if err != nil {
+			return nil, err
+		}
+
+		token = strings.TrimSpace(config.GitHubToken)
+	}
+
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
