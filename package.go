@@ -69,16 +69,20 @@ func (pkg *Package) Get(force, dry bool) error {
 		return nil
 	}
 
-	log.Stepf("installing %s %s\n", pkg.Name(), remote)
+	return pkg.installVersion(remote)
+}
+
+func (pkg *Package) installVersion(version semver.SemVer) error {
+	log.Stepf("installing %s %s\n", pkg.Name(), version)
 
 	installStarted := time.Now()
 
-	err = pkg.Install(remote)
+	err := pkg.Install(version)
 	if err != nil {
 		return err
 	}
 
-	err = pkg.ValidateBinary(pkg.Path, remote)
+	err = pkg.ValidateBinary(pkg.Path, version)
 	if err != nil {
 		return err
 	}
@@ -88,7 +92,7 @@ func (pkg *Package) Get(force, dry bool) error {
 		return err
 	}
 
-	log.Successf("installed %s %s in %s\n", pkg.Name(), remote, time.Since(installStarted).Round(time.Millisecond))
+	log.Successf("installed %s %s in %s\n", pkg.Name(), version, time.Since(installStarted).Round(time.Millisecond))
 
 	return nil
 }

@@ -36,6 +36,9 @@ tap find                # browse the catalog
 tap find compiler       # search names and descriptions
 tap get go zig bun      # install or update packages
 tap get --dry go bun    # check for updates without installing
+tap up                  # preview updates for installed packages and confirm
+tap up --dry            # show the update plan without installing
+tap up --yes            # update installed packages without confirmation
 tap info go bun         # show details, installed versions and latest versions
 tap ls                  # list installed catalog packages
 tap rm bun              # remove a package
@@ -44,7 +47,9 @@ tap tap                 # update tap itself
 
 `get`, `rm` and `info` accept multiple package names. Names are case-insensitive. Run `tap --help` for help or `tap --version` for Tap's version.
 
-`get` installs the latest stable release and leaves an equal or newer installation of the selected variant alone. `ls` and `find` work offline; `get`, `info` and `tap tap` check remote releases.
+`get` installs the latest stable release and leaves an equal or newer installation of the selected variant alone. `ls` and `find` work offline; `get`, `up`, `info` and `tap tap` check remote releases.
+
+`up` checks installed catalog packages, preserves their variants, and shows current and target versions before asking for confirmation (default: no). Use `--dry` to preview or `--yes` (`-y`) to skip confirmation. Failed checks and unknown variants are reported and skipped; independent updates can proceed, but any failure produces a nonzero exit status. Go updates are ordered before PACE, with required PACE reinstalls included in the plan; incompatible Go/PACE updates are skipped. Elevation is requested only after confirmation. Tap itself is updated separately with `tap tap`.
 
 ### Reinstalling and switching variants
 

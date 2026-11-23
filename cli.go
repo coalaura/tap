@@ -50,6 +50,29 @@ func NewCommand() *cli.Command {
 				},
 			},
 			{
+				Name:   "up",
+				Usage:  "update installed packages after confirmation",
+				Action: updatePackages,
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:  "dry",
+						Usage: "show the update plan without installing",
+					},
+					&cli.BoolFlag{
+						Name:    "yes",
+						Aliases: []string{"y"},
+						Usage:   "apply the update plan without confirmation",
+					},
+				},
+			},
+			{
+				// Elevation must replay the approved version rather than resolve latest again.
+				Name:      "install-version",
+				ArgsUsage: "<package[:variant]> <version>",
+				Hidden:    true,
+				Action:    installPackageVersion,
+			},
+			{
 				Name:      "rm",
 				Usage:     "remove packages",
 				ArgsUsage: "<package[:variant]>...",
