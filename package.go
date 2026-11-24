@@ -36,7 +36,7 @@ func (pkg *Package) Get(ctx context.Context, force, dry bool) error {
 			return err
 		}
 
-		log.Subf("current: %s\n", local)
+		log.Subf("%s: current: %s\n", pkg.Name(), local)
 	}
 
 	remote, err := pkg.FetchLatestVersion()
@@ -51,13 +51,13 @@ func (pkg *Package) Get(ctx context.Context, force, dry bool) error {
 		}
 
 		if !local.Equal(semver.NewEmptySemVer()) && !remote.HigherThan(local) && variant == pkg.Variant {
-			log.Subf("up to date: %s (checked in %s)\n", local, time.Since(checkStarted).Round(time.Millisecond))
+			log.Subf("%s: up to date: %s (checked in %s)\n", pkg.Name(), local, time.Since(checkStarted).Round(time.Millisecond))
 
 			return nil
 		}
 	}
 
-	log.Subf("latest: %s (checked in %s)\n", remote, time.Since(checkStarted).Round(time.Millisecond))
+	log.Subf("%s: latest: %s (checked in %s)\n", pkg.Name(), remote, time.Since(checkStarted).Round(time.Millisecond))
 
 	if dry {
 		return nil

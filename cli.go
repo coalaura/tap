@@ -162,20 +162,20 @@ func getPackages(ctx context.Context, command *cli.Command) error {
 	force := command.Bool("force")
 	dry := command.Bool("dry")
 
-	return applyPackages(ctx, command, func(pkg *Package) error {
+	return applyPackages(ctx, command, true, func(pkg *Package) error {
 		return pkg.Get(ctx, force, dry)
 	})
 }
 
 func removePackages(ctx context.Context, command *cli.Command) error {
-	return applyPackages(ctx, command, func(pkg *Package) error {
+	return applyPackages(ctx, command, false, func(pkg *Package) error {
 		err := pkg.Remove()
 
 		return retryElevated(ctx, []string{"rm", pkg.Name()}, err)
 	})
 }
 
-func applyPackages(ctx context.Context, command *cli.Command, action func(*Package) error) error {
+func applyPackages(ctx context.Context, command *cli.Command, parallel bool, action func(*Package) error) error {
 	if command.Args().Len() == 0 {
 		return fmt.Errorf("package required; see tap %s --help", command.Name)
 	}
@@ -183,6 +183,12 @@ func applyPackages(ctx context.Context, command *cli.Command, action func(*Packa
 	packages, err := SelectPackages(command.Args().Slice())
 	if err != nil {
 		return err
+	}
+
+	if parallel {
+		return installPackages(ctx, packages, func(index int) error {
+			return action(packages[index])
+		})
 	}
 
 	var failures []error

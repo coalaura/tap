@@ -8,6 +8,7 @@ import (
 	"io"
 	"runtime"
 	"strings"
+	"sync/atomic"
 	"text/tabwriter"
 
 	"github.com/coalaura/semver"
@@ -297,48 +298,38 @@ func confirmPackageUpdates(reader io.Reader, writer io.Writer) (bool, error) {
 }
 
 func applyPackageUpdates(ctx context.Context, plan []packageUpdate) error {
-	failures := make([]error, 0, len(plan))
-
-	var (
-		updated  int
-		goFailed bool
-	)
+	packages := make([]*Package, len(plan))
 
 	for index := range plan {
-		if ctx.Err() != nil {
-			return errors.Join(errors.Join(failures...), ctx.Err())
-		}
-
-		update := &plan[index]
-		pkg := update.Package
-
-		var err error
-
-		if pkg.Definition.Source == "pace" && goFailed {
-			err = errors.New("skipped because the Go update failed")
-		} else {
-			err = installResolvedPackage(ctx, pkg, update.Target)
-		}
-
-		if err != nil {
-			failure := fmt.Errorf("%s: %w", pkg.Name(), err)
-			failures = append(failures, failure)
-
-			log.Warnf("%v\n", failure)
-
-			if pkg.Definition.Source == "go" {
-				goFailed = true
-			}
-
-			continue
-		}
-
-		updated++
+		packages[index] = plan[index].Package
 	}
 
-	log.Infof("finished: %d updated, %d failed\n", updated, len(failures))
+	var updated atomic.Int64
 
-	return errors.Join(failures...)
+	err := installPackages(ctx, packages, func(index int) error {
+		update := &plan[index]
+
+		err := installResolvedPackage(ctx, update.Package, update.Target)
+		if err == nil {
+			updated.Add(1)
+		}
+
+		return err
+	})
+
+	if ctx.Err() != nil {
+		return err
+	}
+
+	if err != nil {
+		log.Warnf("%v\n", err)
+	}
+
+	succeeded := updated.Load()
+
+	log.Infof("finished: %d updated, %d failed\n", succeeded, int64(len(plan))-succeeded)
+
+	return err
 }
 
 func installResolvedPackage(ctx context.Context, pkg *Package, version semver.SemVer) error {

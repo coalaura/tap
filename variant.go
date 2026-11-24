@@ -20,7 +20,10 @@ func (pkg *Package) InstalledVariant() (string, error) {
 		return pkg.Variant, nil
 	}
 
+	configMutex.Lock()
 	config, err := ReadConfig()
+	configMutex.Unlock()
+
 	if err != nil {
 		return "", err
 	}
@@ -53,12 +56,15 @@ func (pkg *Package) RecordVariant() error {
 		return nil
 	}
 
-	config, err := ReadConfig()
+	digest, err := binaryDigest(pkg.Path)
 	if err != nil {
 		return err
 	}
 
-	digest, err := binaryDigest(pkg.Path)
+	configMutex.Lock()
+	defer configMutex.Unlock()
+
+	config, err := ReadConfig()
 	if err != nil {
 		return err
 	}
@@ -79,6 +85,9 @@ func (pkg *Package) RemoveVariantRecord() error {
 	if len(pkg.Definition.Variants) == 0 {
 		return nil
 	}
+
+	configMutex.Lock()
+	defer configMutex.Unlock()
 
 	config, err := ReadConfig()
 	if err != nil {

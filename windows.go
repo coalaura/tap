@@ -8,9 +8,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 
 	"github.com/coalaura/semver"
 )
+
+var msiMutex sync.Mutex
 
 func (pkg *Package) InstallMSI(path string) error {
 	return RunMSI("/i", path)
@@ -94,6 +97,10 @@ func RemoveGo() error {
 }
 
 func RunMSI(action, path string) error {
+	// Windows Installer only permits one installation transaction at a time.
+	msiMutex.Lock()
+	defer msiMutex.Unlock()
+
 	err := RunCommandOrError("msiexec.exe", action, path, "/qn", "/norestart")
 
 	var exitError *exec.ExitError

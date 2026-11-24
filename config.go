@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/goccy/go-yaml"
 )
@@ -14,6 +15,8 @@ type Config struct {
 	GitHubToken string                   `yaml:"github_token,omitempty"`
 	Packages    map[string]variantRecord `yaml:"packages,omitempty"`
 }
+
+var configMutex sync.Mutex
 
 func ConfigPath() (string, error) {
 	home, err := UserHomeDir()

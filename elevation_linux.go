@@ -16,6 +16,10 @@ func retryElevated(ctx context.Context, arguments []string, cause error) error {
 		return cause
 	}
 
+	// Serialize sudo prompts and prevent child config updates from racing local read-modify-writes.
+	configMutex.Lock()
+	defer configMutex.Unlock()
+
 	err := ctx.Err()
 	if err != nil {
 		return err

@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path"
 	"strings"
 	"time"
 )
@@ -111,7 +112,7 @@ func downloadToFile(url, expectedHash string, file *os.File) error {
 	}
 
 	if resp.ContentLength > 0 {
-		log.Subf("downloading %s\n", formatFileSize(resp.ContentLength))
+		log.Subf("downloading %s (%s)\n", path.Base(req.URL.Path), formatFileSize(resp.ContentLength))
 	}
 
 	hasher := sha256.New()
@@ -150,7 +151,7 @@ func downloadToFile(url, expectedHash string, file *os.File) error {
 	}
 
 	if resp.ContentLength <= 0 {
-		log.Subf("downloaded %s\n", formatFileSize(n))
+		log.Subf("downloaded %s (%s)\n", path.Base(req.URL.Path), formatFileSize(n))
 	}
 
 	return nil
