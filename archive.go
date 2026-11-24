@@ -3,6 +3,7 @@ package main
 import (
 	"archive/tar"
 	"archive/zip"
+	"bufio"
 	"compress/gzip"
 	"errors"
 	"fmt"
@@ -47,7 +48,8 @@ func ExtractTarXzFile(path, targetDir string) error {
 
 	defer file.Close()
 
-	xzr, err := (xz.ReaderConfig{DictCap: MaxXZDictionary}).NewReader(file)
+	// The XZ decoder reads compressed bytes individually; buffer them to avoid one syscall per byte.
+	xzr, err := (xz.ReaderConfig{DictCap: MaxXZDictionary}).NewReader(bufio.NewReader(file))
 	if err != nil {
 		return err
 	}

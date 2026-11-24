@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"compress/gzip"
 	"errors"
 	"fmt"
@@ -120,7 +121,8 @@ func extractDebData(reader io.Reader, name, targetDir string) error {
 
 		return ExtractTar(compressed, targetDir)
 	case "data.tar.xz":
-		compressed, err := (xz.ReaderConfig{DictCap: MaxXZDictionary}).NewReader(reader)
+		// Buffer inside the member limit to avoid one file read per compressed byte.
+		compressed, err := (xz.ReaderConfig{DictCap: MaxXZDictionary}).NewReader(bufio.NewReader(reader))
 		if err != nil {
 			return err
 		}
