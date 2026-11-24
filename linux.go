@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/coalaura/semver"
 )
@@ -61,10 +62,15 @@ func InstallZig(ver semver.SemVer) error {
 
 	defer os.RemoveAll(dir)
 
+	extractStarted := time.Now()
+	log.Subln("zig: extracting archive")
+
 	err = ExtractTarXzFile(path, dir)
 	if err != nil {
 		return err
 	}
+
+	log.Subf("zig: extracted archive in %s\n", time.Since(extractStarted).Round(time.Millisecond))
 
 	payload := filepath.Join(dir, fmt.Sprintf("zig-x86_64-linux-%s", ver.String()))
 

@@ -200,15 +200,6 @@ func DownloadGoFile(ver semver.SemVer) (string, error) {
 	return DownloadTempFile("https://go.dev/dl/"+file.Filename, GoFileExtension(), file.SHA256)
 }
 
-func DownloadZigFile(ver semver.SemVer) (string, error) {
-	file, err := FetchZigFile(ver)
-	if err != nil {
-		return "", err
-	}
-
-	return DownloadTempFile(file.Tarball, ZigFileExtension(), file.SHA256)
-}
-
 func ParseVersionTag(tag, prefix string) (semver.SemVer, error) {
 	if !strings.HasPrefix(tag, prefix) {
 		return semver.Invalid, errors.New("tag prefix does not match")

@@ -13,17 +13,24 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
 const (
-	MaxDownloadSize = int64(2 << 30)
-	MaxMetadataSize = int64(8 << 20)
+	MaxDownloadSize    = int64(2 << 30)
+	MaxMetadataSize    = int64(8 << 20)
+	DownloadRateWindow = 10 * time.Second
 )
 
 type fallbackTransport struct {
 	primary http.RoundTripper
 	ipv4    http.RoundTripper
+}
+
+type downloadProgress struct {
+	writer io.Writer
+	bytes  atomic.Int64
 }
 
 var (
@@ -60,7 +67,39 @@ func (transport *fallbackTransport) RoundTrip(req *http.Request) (*http.Response
 	return transport.ipv4.RoundTrip(req)
 }
 
+func (progress *downloadProgress) Write(data []byte) (int, error) {
+	written, err := progress.writer.Write(data)
+	progress.bytes.Add(int64(written))
+
+	return written, err
+}
+
 func DownloadTempFile(url, ext, expectedHash string) (string, error) {
+	return downloadTempFile(context.Background(), url, ext, expectedHash, 0)
+}
+
+func ReadResponse(resp *http.Response, limit int64) ([]byte, error) {
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("request returned %s", strings.ToLower(resp.Status))
+	}
+
+	reader := io.LimitReader(resp.Body, limit+1)
+
+	body, err := io.ReadAll(reader)
+	if err != nil {
+		return nil, err
+	}
+
+	if int64(len(body)) > limit {
+		return nil, fmt.Errorf("response exceeds %d bytes", limit)
+	}
+
+	return body, nil
+}
+
+func downloadTempFile(ctx context.Context, url, ext, expectedHash string, minimumRate int64) (string, error) {
 	file, err := os.CreateTemp("", "tap-*"+ext)
 	if err != nil {
 		return "", err
@@ -68,7 +107,7 @@ func DownloadTempFile(url, ext, expectedHash string) (string, error) {
 
 	path := file.Name()
 
-	err = downloadToFile(url, expectedHash, file)
+	err = downloadToFile(ctx, url, expectedHash, file, minimumRate)
 	if err != nil {
 		file.Close()
 
@@ -80,14 +119,24 @@ func DownloadTempFile(url, ext, expectedHash string) (string, error) {
 	return path, nil
 }
 
-func downloadToFile(url, expectedHash string, file *os.File) error {
+func downloadToFile(ctx context.Context, url, expectedHash string, file *os.File, minimumRate int64) error {
 	hash, err := parseSHA256(expectedHash)
 	if err != nil {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
-	defer cancel()
+	ctx, cancel := context.WithCancelCause(ctx)
+	defer cancel(nil)
+
+	var progress *downloadProgress
+
+	if minimumRate > 0 {
+		progress = &downloadProgress{}
+
+		go watchDownload(ctx, cancel, progress, minimumRate)
+	}
+
+	started := time.Now()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -98,6 +147,10 @@ func downloadToFile(url, expectedHash string, file *os.File) error {
 
 	resp, err := downloadClient.Do(req)
 	if err != nil {
+		if ctx.Err() != nil {
+			return context.Cause(ctx)
+		}
+
 		return err
 	}
 
@@ -116,17 +169,29 @@ func downloadToFile(url, expectedHash string, file *os.File) error {
 	}
 
 	hasher := sha256.New()
+	writer := io.MultiWriter(file, hasher)
+
+	if progress != nil {
+		progress.writer = writer
+		writer = progress
+	}
 
 	reader := io.LimitReader(resp.Body, MaxDownloadSize+1)
 
-	n, copyErr := io.Copy(io.MultiWriter(file, hasher), reader)
+	n, copyErr := io.Copy(writer, reader)
+	if copyErr != nil {
+		if ctx.Err() != nil {
+			return context.Cause(ctx)
+		}
+
+		return copyErr
+	}
+
+	// Stop the transfer watchdog before syncing the completed file to disk.
+	cancel(nil)
 
 	syncErr := file.Sync()
 	closeErr := file.Close()
-
-	if copyErr != nil {
-		return copyErr
-	}
 
 	if n > MaxDownloadSize {
 		return fmt.Errorf("download exceeds %d bytes", MaxDownloadSize)
@@ -150,32 +215,39 @@ func downloadToFile(url, expectedHash string, file *os.File) error {
 		return fmt.Errorf("sha256 mismatch: expected %s, got %s", hex.EncodeToString(hash), hex.EncodeToString(actual))
 	}
 
-	if resp.ContentLength <= 0 {
-		log.Subf("downloaded %s (%s)\n", path.Base(req.URL.Path), formatFileSize(n))
-	}
+	elapsed := time.Since(started)
+	rate := int64(float64(n) / elapsed.Seconds())
+	log.Subf("downloaded %s (%s) in %s (%s/s)\n", path.Base(req.URL.Path), formatFileSize(n), elapsed.Round(time.Millisecond), formatFileSize(rate))
 
 	return nil
 }
 
-func ReadResponse(resp *http.Response, limit int64) ([]byte, error) {
-	defer resp.Body.Close()
+func watchDownload(ctx context.Context, cancel context.CancelCauseFunc, progress *downloadProgress, minimumRate int64) {
+	ticker := time.NewTicker(DownloadRateWindow)
+	defer ticker.Stop()
 
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("request returned %s", strings.ToLower(resp.Status))
+	previousTime := time.Now()
+
+	var previousBytes int64
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case now := <-ticker.C:
+			currentBytes := progress.bytes.Load()
+
+			rate := int64(float64(currentBytes-previousBytes) / now.Sub(previousTime).Seconds())
+			if rate < minimumRate {
+				cancel(fmt.Errorf("download too slow (%s/s over %s)", formatFileSize(rate), DownloadRateWindow))
+
+				return
+			}
+
+			previousTime = now
+			previousBytes = currentBytes
+		}
 	}
-
-	reader := io.LimitReader(resp.Body, limit+1)
-
-	body, err := io.ReadAll(reader)
-	if err != nil {
-		return nil, err
-	}
-
-	if int64(len(body)) > limit {
-		return nil, fmt.Errorf("response exceeds %d bytes", limit)
-	}
-
-	return body, nil
 }
 
 func newHTTPTransport() *fallbackTransport {
